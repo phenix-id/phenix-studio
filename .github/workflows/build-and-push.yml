@@ -5,14 +5,6 @@ on:
     branches:
       - pipeline-implementation
       - deployment
-    paths:
-      - 'src/**'
-      - 'public/**'
-      - 'package.json'
-      - 'package-lock.json'
-      - 'pnpm-lock.yaml'
-      - 'Dockerfile'
-      - 'astro.config.mjs'
   pull_request:
     branches:
       - pipeline-implementation
@@ -43,6 +35,7 @@ jobs:
     outputs:
       environment: ${{ steps.set-env.outputs.environment }}
       acr_name: ${{ steps.set-env.outputs.acr_name }}
+      image_tag: ${{ steps.tag.outputs.sha }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -88,22 +81,12 @@ jobs:
         id: tag
         run: |
           SHORT_SHA=${GITHUB_SHA::8}
-          ENV="${{ steps.set-env.outputs.environment }}"
           ACR="${{ steps.set-env.outputs.acr_name }}"
           
-          if [ "$ENV" == "prod" ]; then
-            TAG="latest"
-          else
-            TAG="dev"
-          fi
-          
-          echo "tag=$TAG" >> $GITHUB_OUTPUT
           echo "sha=$SHORT_SHA" >> $GITHUB_OUTPUT
           echo "acr_server=${ACR}.azurecr.io" >> $GITHUB_OUTPUT
+          echo "Image will be tagged: ${ACR}.azurecr.io/${{ env.IMAGE_NAME }}:$SHORT_SHA"
 
-      # Note: phenix-studio uses Astro with Deno adapter in SSR mode
-      # Environment variables (PUBLIC_*) are read at runtime, not build time
-      # They should be injected via Kubernetes ConfigMap/Secrets
       - name: Build and push
         uses: docker/build-push-action@v5
         with:
@@ -111,14 +94,14 @@ jobs:
           file: Dockerfile
           push: ${{ github.event_name != 'pull_request' }}
           tags: |
-            ${{ steps.tag.outputs.acr_server }}/${{ env.IMAGE_NAME }}:${{ steps.tag.outputs.tag }}
             ${{ steps.tag.outputs.acr_server }}/${{ env.IMAGE_NAME }}:${{ steps.tag.outputs.sha }}
+            ${{ steps.tag.outputs.acr_server }}/${{ env.IMAGE_NAME }}:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
   update-manifests:
     needs: build
-    if: github.event_name == 'push'
+    if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     steps:
       - name: Generate GitHub App Token
@@ -137,26 +120,46 @@ jobs:
           token: ${{ steps.app-token.outputs.token }}
           path: manifests
 
-      - name: Update image tags in kustomization
+      - name: Update image tag in kustomization
         run: |
           ENV="${{ needs.build.outputs.environment }}"
-          cd manifests/apps/$ENV
-          SHORT_SHA=${GITHUB_SHA::8}
+          IMAGE_TAG="${{ needs.build.outputs.image_tag }}"
           
-          if grep -q "phenix-studio" kustomization.yaml; then
-            sed -i "/phenix-studio/,/newTag:/s/newTag: .*/newTag: $SHORT_SHA/" kustomization.yaml
+          echo "Updating phenix-studio image tag to $IMAGE_TAG in $ENV environment"
+          
+          cd manifests/apps/$ENV
+          
+          # Update the newTag for phenix-studio in kustomization.yaml
+          if grep -q "name: phenix-studio" kustomization.yaml; then
+            # Use yq if available, otherwise sed
+            if command -v yq &> /dev/null; then
+              yq -i '(.images[] | select(.name == "phenix-studio")).newTag = "'$IMAGE_TAG'"' kustomization.yaml
+            else
+              # Sed approach - find phenix-studio block and update newTag
+              sed -i "/name: phenix-studio/,/newTag:/s/newTag: .*/newTag: $IMAGE_TAG/" kustomization.yaml
+            fi
+            echo "Updated kustomization.yaml:"
+            cat kustomization.yaml
+          else
+            echo "Warning: phenix-studio not found in kustomization.yaml"
+            echo "Current content:"
+            cat kustomization.yaml
           fi
 
       - name: Commit and push
         run: |
           cd manifests
           ENV="${{ needs.build.outputs.environment }}"
+          IMAGE_TAG="${{ needs.build.outputs.image_tag }}"
+          
           git config user.name "phenix-ci[bot]"
           git config user.email "phenix-ci[bot]@users.noreply.github.com"
           git add -A
+          
           if ! git diff --staged --quiet; then
-            git commit -m "[$ENV] Update phenix-studio to ${GITHUB_SHA::8}"
+            git commit -m "[$ENV] Update phenix-studio image to $IMAGE_TAG"
             git push
+            echo "✅ Manifest updated successfully"
           else
-            echo "No changes to commit"
+            echo "ℹ️ No changes to commit"
           fi
