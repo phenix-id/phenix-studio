@@ -20,12 +20,19 @@ FROM node:lts as prod
 RUN apt-get update && \
     apt-get install -y curl unzip && \
     curl -fsSL https://deno.land/x/install/install.sh | sh && \
-    ln -s /root/.deno/bin/deno /usr/local/bin/deno
+    ln -s /root/.deno/bin/deno /usr/local/bin/deno && \
+    apt-get clean && rm -rf /var/lib/apt/lists/*
+
+# Create non-root user
+RUN groupadd -r appgroup && useradd -r -g appgroup -d /app appuser
 
 WORKDIR /app
-COPY --from=build /app/node_modules ./node_modules
-COPY --from=build /app/package.json ./
-COPY --from=build /app/dist ./dist
+COPY --from=build --chown=appuser:appgroup /app/node_modules ./node_modules
+COPY --from=build --chown=appuser:appgroup /app/package.json ./
+COPY --from=build --chown=appuser:appgroup /app/dist ./dist
+
+# Switch to non-root user
+USER appuser
+
 EXPOSE 3000
-#CMD ["deno", "run", "--allow-net", "--allow-read", "--allow-env", "./dist/server/entry.mjs"]
 CMD [ "npm", "run", "preview" ]
