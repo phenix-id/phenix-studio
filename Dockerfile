@@ -26,9 +26,16 @@ RUN apt-get update && \
 RUN groupadd -r -g 1001 appgroup && useradd -r -u 1001 -g appgroup -d /app appuser
 
 WORKDIR /app
+
+# Create deno cache directory with proper permissions
+RUN mkdir -p /app/.cache/deno && chown -R 1001:1001 /app/.cache
+
 COPY --from=build --chown=1001:1001 /app/node_modules ./node_modules
 COPY --from=build --chown=1001:1001 /app/package.json ./
 COPY --from=build --chown=1001:1001 /app/dist ./dist
+
+# Set deno cache dir
+ENV DENO_DIR=/app/.cache/deno
 
 # Switch to non-root user
 USER 1001
