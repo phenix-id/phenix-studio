@@ -1,10 +1,9 @@
 FROM node:lts as build
 
-# Install Deno
+# Install Deno to /usr/local/bin
 RUN apt-get update && \
     apt-get install -y curl unzip && \
-    curl -fsSL https://deno.land/x/install/install.sh | sh && \
-    ln -s /root/.deno/bin/deno /usr/local/bin/deno
+    curl -fsSL https://deno.land/x/install/install.sh | DENO_INSTALL=/usr/local sh
 
 WORKDIR /app
 RUN deno --version
@@ -16,11 +15,11 @@ RUN npm run build
 # Stage 2
 FROM node:lts as prod
 
-# Install Deno
+# Install Deno to /usr/local/bin (accessible by all users)
 RUN apt-get update && \
     apt-get install -y curl unzip && \
-    curl -fsSL https://deno.land/x/install/install.sh | sh && \
-    ln -s /root/.deno/bin/deno /usr/local/bin/deno && \
+    curl -fsSL https://deno.land/x/install/install.sh | DENO_INSTALL=/usr/local sh && \
+    chmod +x /usr/local/bin/deno && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # Create non-root user with specific UID
