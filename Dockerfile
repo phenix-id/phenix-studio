@@ -22,20 +22,21 @@ RUN apt-get update && \
     chmod +x /usr/local/bin/deno && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
 
-# Create non-root user with specific UID
-RUN groupadd -r -g 1001 appgroup && useradd -r -u 1001 -g appgroup -d /app appuser
+# Create non-root user with specific UID and create app directory
+RUN groupadd -r -g 1001 appgroup && \
+    useradd -r -u 1001 -g appgroup -d /app appuser && \
+    mkdir -p /app && \
+    chown -R 1001:1001 /app
 
 WORKDIR /app
 
-# Create deno cache directory with proper permissions
-RUN mkdir -p /app/.cache/deno && chown -R 1001:1001 /app/.cache
+# Set deno cache dir
+ENV DENO_DIR=/app/.cache/deno
 
+# Copy files with correct ownership
 COPY --from=build --chown=1001:1001 /app/node_modules ./node_modules
 COPY --from=build --chown=1001:1001 /app/package.json ./
 COPY --from=build --chown=1001:1001 /app/dist ./dist
-
-# Set deno cache dir
-ENV DENO_DIR=/app/.cache/deno
 
 # Switch to non-root user
 USER 1001
