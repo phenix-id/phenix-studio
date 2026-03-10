@@ -2,8 +2,8 @@ name: Build and Deploy App to ECS
 
 on:
   push:
-    branches:
-      - pipeline-implementation
+    tags:
+      - 'dev-*'
 
 env:
   ECR_IMAGE_TAG: "FRONTEND_V_${{ github.run_number }}"
