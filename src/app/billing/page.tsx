@@ -1,10 +1,6 @@
-import Billing from '@/features/profile/components/Billing'
-import React from 'react'
+import { pathRoutes } from '@/config/pathRoutes'
+import { redirect } from 'next/navigation'
 
-const page = (): React.JSX.Element => (
-  <div>
-    <Billing />
-  </div>
-)
+const page = (): never => redirect(pathRoutes.organizations.billing)
 
 export default page

@@ -23,6 +23,7 @@ import { apiRoutes } from '@/config/apiRoutes'
 import { apiStatusCodes } from '@/config/CommonConstant'
 import { getUserProfile } from '@/app/api/Auth'
 import { logout } from '@/lib/authSlice'
+import { pathRoutes } from '@/config/pathRoutes'
 import { persistor } from '@/lib/store'
 import { resetOrgState } from '@/lib/orgSlice'
 import { resetVerificationState } from '@/lib/verificationSlice'
@@ -155,7 +156,9 @@ export function UserNav(): React.JSX.Element | null {
 
           {process.env.NEXT_PUBLIC_ENABLE_BILLING_OPTION?.toLowerCase() ===
             'true' && (
-            <DropdownMenuItem onClick={() => router.push('/billing ')}>
+            <DropdownMenuItem
+              onClick={() => router.push(pathRoutes.organizations.billing)}
+            >
               Billing
             </DropdownMenuItem>
           )}

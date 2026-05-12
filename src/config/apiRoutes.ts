@@ -85,6 +85,16 @@ export const apiRoutes = {
     deleteIssaunce: '/issuance-records',
     deleteConnections: '/connections',
   },
+  Marketplace: {
+    resolve: '/marketplace/subscriptions/resolve',
+    onboardingSession: '/marketplace/onboarding/sessions',
+    onboarding: '/marketplace/onboarding',
+    subscription: '/marketplace/subscriptions',
+    entitlements: '/marketplace/orgs',
+    usageSummary: '/marketplace/orgs',
+    meteringEvents: '/marketplace/orgs',
+    availablePlans: '/marketplace/subscriptions',
+  },
   connection: {
     create: '/connections',
   },

@@ -21,8 +21,15 @@ export const pathRoutes = {
     root: '/ecosystems',
     ecosystemLogin: '/authentication/sign-in',
   },
+  marketplace: {
+    landing: '/marketplace/landing',
+    onboarding: '/marketplace/onboarding',
+    success: '/marketplace/onboarding/success',
+    error: '/marketplace/onboarding/error',
+  },
   organizations: {
     root: '/organizations',
+    billing: '/organizations/billing',
     invitations: '/invitations',
     users: '/users',
     schemas: '/schemas',
