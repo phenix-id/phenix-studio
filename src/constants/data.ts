@@ -65,6 +65,14 @@ export const navItems: NavItem[] = [
       },
     ],
   },
+  {
+    title: 'Billing',
+    url: '/organizations/billing',
+    icon: 'billing',
+    shortcut: ['b', 'b'],
+    isActive: false,
+    items: [],
+  },
 ]
 
 export interface saleuser {
