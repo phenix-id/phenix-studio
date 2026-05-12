@@ -15,29 +15,17 @@ yarn
 
 _PNPM is the package manager of choice for illustration, but you can use what you want._
 
-1. Launch the Astro local development server on `localhost:2121` by running the following command:
+1. Launch the Next.js local development server on `localhost:3000` by running the following command:
 
 ```sh
 pnpm run dev
 ```
 
-You can also build the project and get the distribution files inside the `dist/` folder by running:
+You can also build the project and get the distribution files inside the `.next/` folder by running:
 
 ```sh
 pnpm run build
 ```
-
-Then, you can preview the generated build with a local web server:
-
-```sh
-pnpm run preview
-```
-
-
-## Credit
-
-The CREDEBL platform is built by Blockster Labs (Product Division of AyanWorks). 
-For the core SSI capabilities, it leverages the great work from multiple open-source projects such as Hyperledger Aries, Bifold, Asker, Indy, etc.
 
 ## Contributing
 
