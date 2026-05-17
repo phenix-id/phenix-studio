@@ -245,7 +245,7 @@ export const bulkIssuanceApiParameter = {
   allSearch: '',
 }
 
-export const defaultCredeblFooterText = 'CREDEBL, a Series of LF Projects, LLC'
+export const defaultCredeblFooterText = 'Phenix ID. All rights reserved.'
 
 export const InfoText = {
   DIDCommInfoText:
