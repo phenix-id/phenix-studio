@@ -8,8 +8,11 @@ interface IFooter {
 
 const Footer: React.FC<IFooter> = ({ fixed = false }) => {
   const activeTheme = (process.env.NEXT_PUBLIC_ACTIVE_THEME || '').toUpperCase()
+  const configuredFooterText = process.env.NEXT_PUBLIC_FOOTER_TEXT?.trim()
   const footerText =
-    process.env.NEXT_PUBLIC_FOOTER_TEXT || defaultCredeblFooterText
+    configuredFooterText && !configuredFooterText.startsWith('#')
+      ? configuredFooterText
+      : defaultCredeblFooterText
 
   return (
     <footer

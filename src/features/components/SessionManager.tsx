@@ -20,6 +20,7 @@ const preventRedirectOnPaths = [
   '/billing',
   '/organizations/billing',
   '/marketplace',
+  '/legal',
   '/schemas',
   '/invitations',
   '/delete-organization',
@@ -32,6 +33,7 @@ const excludeRouteForSessionCheck = [
   '/reset-password',
   '/sign-up',
   '/marketplace',
+  '/legal',
 ]
 
 export const SessionManager = ({

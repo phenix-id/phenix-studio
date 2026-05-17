@@ -35,6 +35,53 @@ function extractData<T>(response: AxiosResponse | string): T | null {
   return envelope.data || null
 }
 
+const formatLimit = (value?: number | null): string => {
+  if (value === null || value === undefined) {
+    return '-'
+  }
+
+  return new Intl.NumberFormat('en-US').format(value)
+}
+
+interface PlanLimitRow {
+  label: string
+  value?: number | null
+}
+
+function PlanLimitsCard({
+  limits,
+}: {
+  limits?: Record<string, number | null>
+}): React.JSX.Element {
+  const rows: PlanLimitRow[] = [
+    { label: 'Studio users', value: limits?.maxUsers },
+    { label: 'Organizations', value: limits?.maxOrganizations },
+  ]
+
+  return (
+    <Card className="rounded-md">
+      <CardHeader>
+        <CardTitle>Plan limits</CardTitle>
+        <CardDescription>
+          Current Marketplace limits applied to this organization.
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <div className="grid gap-3 sm:grid-cols-2">
+          {rows.map(({ label, value }) => (
+            <div key={label} className="rounded-md border p-3">
+              <p className="text-muted-foreground text-sm">{label}</p>
+              <p className="mt-1 text-2xl font-semibold tracking-normal">
+                {formatLimit(value)}
+              </p>
+            </div>
+          ))}
+        </div>
+      </CardContent>
+    </Card>
+  )
+}
+
 export function BillingOverview(): React.JSX.Element {
   const orgId = useAppSelector((state) => state.organization.orgId)
   const orgInfo = useAppSelector((state) => state.organization.orgInfo)
@@ -156,6 +203,8 @@ export function BillingOverview(): React.JSX.Element {
       )}
 
       <MarketplacePlanSummary subscription={subscription || undefined} />
+
+      <PlanLimitsCard limits={entitlements?.limits} />
 
       <Card className="rounded-md">
         <CardHeader>

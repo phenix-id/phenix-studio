@@ -22,9 +22,16 @@ const PageLayout: React.FC<PageLayoutProps> = ({ children }) => {
     '/verify-email-success',
     '/reset-password',
   ]
+  const excludeLayoutPrefixes = ['/marketplace', '/legal']
+  const shouldExcludeLayout =
+    excludeLayoutRoutes.includes(pathname) ||
+    excludeLayoutPrefixes.some((routePrefix) =>
+      pathname.startsWith(routePrefix),
+    )
+
   return (
     <>
-      {excludeLayoutRoutes.includes(pathname) ? (
+      {shouldExcludeLayout ? (
         <>{children}</>
       ) : (
         <KBar>
