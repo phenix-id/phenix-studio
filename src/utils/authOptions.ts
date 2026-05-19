@@ -5,7 +5,7 @@ import CredentialsProvider from 'next-auth/providers/credentials'
 import { JWT } from 'next-auth/jwt'
 import { Provider } from 'next-auth/providers/index'
 import { apiRoutes } from '@/config/apiRoutes'
-import { passwordEncryption } from '@/app/api/server/encryption'
+import { passwordValueEncryption } from '@/utils/passwordEncryption'
 
 type PasskeyUser = {
   userName: string
@@ -93,7 +93,7 @@ export const authOptions: MyAuthOptions = {
           if (isPassword) {
             sanitizedPayload = {
               email,
-              password: passwordEncryption(password || ''),
+              password: await passwordValueEncryption(password || ''),
               isPasskey,
             }
           } else {
