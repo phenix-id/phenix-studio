@@ -32,7 +32,6 @@ import { RefreshCw } from 'lucide-react' // Import refresh icon
 import RoleViewButton from '@/components/RoleViewButton'
 import SidePanelComponent from '@/config/SidePanelCommon'
 import { apiStatusCodes } from '@/config/CommonConstant'
-import { decryptValue } from './SchemaListUtils'
 import { getOrganizationById } from '@/app/api/organization'
 import { useAppSelector } from '@/lib/hooks'
 import { useRouter } from 'next/navigation'
@@ -270,15 +269,10 @@ const VerificationCredentialList = (): JSX.Element => {
       accessorKey: 'connectionDetail',
       columnFunction: [],
       cell: ({ row }): JSX.Element => {
-        const isEncrypted = (value: string): boolean =>
-          typeof value === 'string' && value.startsWith('U2FsdGVkX1')
-        let email = row.original.emailId
+        const email = row.original.emailId
         const connection = String(
           row.original.connections?.theirLabel ?? '--/--',
         )
-        if (email && email !== 'Not Available' && isEncrypted(email)) {
-          email = decryptValue(String(email))
-        }
         return (
           <button
             className="url-link"
