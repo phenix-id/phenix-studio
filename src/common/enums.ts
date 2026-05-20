@@ -40,6 +40,8 @@ export enum Features {
   CRETAE_SCHEMA = 'create_schema',
   ISSUANCE = 'issuance',
   VERIFICATION = 'verification',
+  CREATE_CERTIFICATE = 'create_certificate',
+  ECOSYSTEM = 'ecosystem',
 }
 
 export enum SchemaTypes {
@@ -64,6 +66,8 @@ export enum Roles {
   ISSUER = 'issuer',
   VERIFIER = 'verifier',
   MEMBER = 'member',
+  ECOSYSTEM_LEAD = 'ecosystem lead',
+  ECOSYSTEM_MEMBER = 'ecosystem member',
 }
 
 export enum OrganizationRoles {
@@ -103,4 +107,15 @@ export enum CredentialType {
 export enum ProofType {
   polygon = 'EcdsaSecp256k1Signature2019',
   no_ledger = 'Ed25519Signature2018',
+}
+
+export enum MemberInvitation {
+  ACCEPTED = 'accepted',
+  PENDING = 'pending',
+  REJECTED = 'rejected',
+}
+
+export enum EcosystemOrgStatus {
+  ACTIVE = 'ACTIVE',
+  INACTIVE = 'INACTIVE',
 }
