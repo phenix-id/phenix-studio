@@ -67,10 +67,13 @@ export default function AppSidebar(): React.JSX.Element {
   const [currentPage] = useState(currentPageNumber)
   const [pageSize] = useState(itemPerPage)
   const [searchTerm] = useState('')
-  const [, setOrgList] = useState<Organization[]>([])
+  const [managedNavItem, setManagedNavItem] = useState<NavItem[]>(navItems)
 
   const selectedOrgId = useAppSelector((state) => state.organization.orgId)
   const isCollapsed = useAppSelector((state) => state.sidebar.isCollapsed)
+  const ecosystemEnableStatus = useAppSelector(
+    (state) => state.ecosystem.ecosystemEnableStatus,
+  )
 
   useEffect(() => {
     dispatch(setSidebarCollapsed(true))
@@ -90,7 +93,6 @@ export default function AppSidebar(): React.JSX.Element {
           response?.data?.data?.organizations
         ) {
           const orgs = response.data.data.organizations
-          setOrgList(orgs)
 
           if (!selectedOrgId && orgs.length > 0) {
             const [firstOrg]: Organization[] = orgs
@@ -110,8 +112,6 @@ export default function AppSidebar(): React.JSX.Element {
               }),
             )
           }
-        } else {
-          setOrgList([])
         }
       } catch (err) {
         console.error('Error fetching organizations:', err)
@@ -121,6 +121,27 @@ export default function AppSidebar(): React.JSX.Element {
     fetchOrganizations()
   }, [dispatch, currentPage, pageSize, searchTerm, selectedOrgId])
 
+  useEffect(() => {
+    if (ecosystemEnableStatus) {
+      setManagedNavItem((prev) => {
+        const exists = prev.some((item) => item.url === '/ecosystems')
+        if (exists) {
+          return prev
+        }
+
+        const ecosystemMenu: NavItem = {
+          title: 'Ecosystems',
+          url: '/ecosystems',
+          icon: 'world',
+          isActive: false,
+          shortcut: ['e', 'e'],
+          items: [],
+        }
+
+        return [...prev, ecosystemMenu]
+      })
+    }
+  }, [ecosystemEnableStatus])
   return (
     <Sidebar collapsible="icon">
       <SidebarHeader className="group" data-collapsed>
@@ -156,7 +177,7 @@ export default function AppSidebar(): React.JSX.Element {
       <SidebarContent className="overflow-x-hidden">
         <SidebarGroup>
           <SidebarMenu>
-            {navItems.map((item: NavItem): JSX.Element => {
+            {managedNavItem.map((item: NavItem): JSX.Element => {
               const Icon = item.icon ? Icons[item.icon] : Icons.logo
               return item?.items && item.items.length > 0 ? (
                 <Collapsible
@@ -187,7 +208,13 @@ export default function AppSidebar(): React.JSX.Element {
                               isActive={pathname === subItem.url}
                               className="data-[active=true]:bg-primary data-[active=true]:hover:bg-primary/90 data-[active=true]:text-primary-foreground"
                             >
-                              <Link href={subItem.url}>
+                              <Link
+                                href={
+                                  subItem.title === 'DID'
+                                    ? `${subItem.url}?orgId=${selectedOrgId}`
+                                    : subItem.url
+                                }
+                              >
                                 <span>{subItem.title}</span>
                               </Link>
                             </SidebarMenuSubButton>
@@ -202,7 +229,7 @@ export default function AppSidebar(): React.JSX.Element {
                   <SidebarMenuButton
                     asChild
                     tooltip={item.title}
-                    isActive={pathname === item.url}
+                    isActive={pathname.startsWith(item.url)}
                     className="data-[active=true]:bg-primary data-[active=true]:hover:bg-primary/90 data-[active=true]:text-primary-foreground"
                   >
                     <Link href={item.url}>
