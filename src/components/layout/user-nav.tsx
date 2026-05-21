@@ -21,6 +21,7 @@ import { IUserProfile } from '../profile/interfaces'
 import { ThemeSelector } from '../theme-selector'
 import { apiRoutes } from '@/config/apiRoutes'
 import { apiStatusCodes } from '@/config/CommonConstant'
+import { generateAccessToken } from '@/utils/session'
 import { getUserProfile } from '@/app/api/Auth'
 import { logout } from '@/lib/authSlice'
 import { pathRoutes } from '@/config/pathRoutes'
@@ -68,6 +69,14 @@ export function UserNav(): React.JSX.Element | null {
     return null
   }
 
+  const signOutLocally = async (): Promise<void> => {
+    dispatch(resetOrgState())
+    dispatch(resetVerificationState())
+    dispatch(logout())
+    await persistor.purge()
+    signOut({ callbackUrl: '/sign-in' })
+  }
+
   const logoutUser = async (): Promise<void> => {
     const rootKey = 'persist:root'
     const payload = {
@@ -86,30 +95,26 @@ export function UserNav(): React.JSX.Element | null {
       },
     )
 
-    if (!response.ok) {
-      console.error('Logout API failed')
-    }
-
-    // 2. Then sign out locally with NextAuth
-    if (localStorage.getItem(rootKey)) {
-      localStorage.removeItem(rootKey)
-
-      const interval = setInterval(() => {
-        if (!localStorage.getItem(rootKey)) {
-          clearInterval(interval)
-          signOut({ callbackUrl: '/sign-in' })
-        }
-      }, 100)
+    if (response.status === apiStatusCodes.API_STATUS_UNAUTHORIZED) {
+      console.error('Logout API failed ')
+      await generateAccessToken()
     } else {
-      signOut({ callbackUrl: '/sign-in' })
+      if (localStorage.getItem(rootKey)) {
+        localStorage.removeItem(rootKey)
+
+        const interval = setInterval(() => {
+          if (!localStorage.getItem(rootKey)) {
+            clearInterval(interval)
+            signOutLocally()
+          }
+        }, 100)
+      } else {
+        signOutLocally()
+      }
     }
   }
 
   const handleLogout = async (): Promise<void> => {
-    dispatch(resetOrgState())
-    dispatch(resetVerificationState())
-    dispatch(logout())
-    await persistor.purge()
     logoutUser()
   }
 
