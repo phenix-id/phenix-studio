@@ -4,6 +4,7 @@ import { setRefreshToken, setSessionId, setToken } from '@/lib/authSlice'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 
 import { apiRoutes } from '@/config/apiRoutes'
+import { generateAccessToken } from '@/utils/session'
 import { passwordValueEncryption } from '@/utils/passwordEncryption'
 import { useAppDispatch } from '@/lib/hooks'
 import { useEffect } from 'react'
@@ -12,9 +13,15 @@ import { useSession } from 'next-auth/react'
 const preventRedirectOnPaths = [
   '/create-organization',
   '/agent-config',
+  '/wallet-setup',
+  '/create-did',
+  '/x509-certificate',
+  '/intents',
+  '/did-details',
   '/organizations',
   '/users',
   '/connections',
+  '/ecosystems',
   '/profile',
   '/developers-setting',
   '/billing',
@@ -29,6 +36,7 @@ const excludeRouteForSessionCheck = [
   '/verify-email-success',
   '/reset-password',
   '/sign-up',
+  '/sign-in',
 ]
 
 export const SessionManager = ({
@@ -46,7 +54,6 @@ export const SessionManager = ({
   const dispatch = useAppDispatch()
 
   const redirectTo = searchParams.get('redirectTo')
-  const clientAlias = searchParams.get('clientAlias')
 
   const setSessionDetails = (
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -70,12 +77,7 @@ export const SessionManager = ({
   }
 
   const logoutSession = (): void => {
-    localStorage.removeItem('persist:root')
-    const signInUrl =
-      redirectTo && clientAlias
-        ? `/sign-in?redirectTo=${encodeURIComponent(redirectTo)}&clientAlias=${clientAlias}`
-        : '/sign-in'
-    router.push(signInUrl)
+    generateAccessToken()
   }
 
   const fetchSessionDetails = async (
@@ -100,7 +102,7 @@ export const SessionManager = ({
       // eslint-disable-next-line
       setSessionDetails(data, redirectTo)
     } catch (error) {
-      console.error('Failed to fetch session details:', error)
+      console.error('Failed to fetch session details: ', error)
       throw error
     }
   }
@@ -118,7 +120,7 @@ export const SessionManager = ({
           pathname.startsWith(page),
         )
         if (!isIgnoreSessionCheck) {
-          logoutSession()
+          router.push('/sign-in')
         }
       }
     }, 500)
