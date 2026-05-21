@@ -88,18 +88,21 @@ export default function KBar({
       router.push(url)
     }
 
-    const createBaseAction = (navItem: NavItem): KBarAction =>
-      (navItem.url !== '#'
-        ? {
-            id: `${navItem.title.toLowerCase()}Action`,
-            name: navItem.title,
-            shortcut: navItem.shortcut,
-            keywords: navItem.title.toLowerCase(),
-            section: 'Navigation',
-            subtitle: `Go to ${navItem.title}`,
-            perform: (): void => navigateTo(navItem.url),
-          }
-        : null)
+    function createBaseAction(navItem: NavItem): KBarAction {
+      if (navItem.url === '#') {
+        return null
+      }
+
+      return {
+        id: `${navItem.title.toLowerCase()}Action`,
+        name: navItem.title,
+        shortcut: navItem.shortcut,
+        keywords: navItem.title.toLowerCase(),
+        section: 'Navigation',
+        subtitle: `Go to ${navItem.title}`,
+        perform: (): void => navigateTo(navItem.url),
+      }
+    }
 
     const convertChildItemToAction = (
       childItem: NavItem,

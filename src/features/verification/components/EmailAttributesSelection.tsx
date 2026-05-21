@@ -212,15 +212,18 @@ const EmailAttributesSelection = (): JSX.Element => {
 
     redirectToAppropriatePage()
   }
-  const mapCredDefs = (
+  function mapCredDefs(
     selectedCredDefs: CredDefData[],
     schema: ISchemaAttributeData,
-  ): CredDefData[] =>
-    (Array.isArray(selectedCredDefs)
-      ? selectedCredDefs.filter(
-          (credDef) => credDef.schemaLedgerId === schema.schemaId,
-        )
-      : [])
+  ): CredDefData[] {
+    if (!Array.isArray(selectedCredDefs)) {
+      return []
+    }
+
+    return selectedCredDefs.filter(
+      (credDef) => credDef.schemaLedgerId === schema.schemaId,
+    )
+  }
   const mapMatchingCredDefs = (
     matchingCredDefs: CredDefData[],
     attribute: IAttributesDetails,

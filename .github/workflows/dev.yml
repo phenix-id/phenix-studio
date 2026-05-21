@@ -82,7 +82,7 @@ jobs:
       - name: Update Task Definition and Service
         run: |
           FAMILY=$(sed -n 's/.*"family": "\(.*\)",/\1/p' taskdef/frontend-taskdef.json)
-          
+
           SERVICE_NAME="frontend-ui"
           echo "SERVICE_NAME: $SERVICE_NAME"
 

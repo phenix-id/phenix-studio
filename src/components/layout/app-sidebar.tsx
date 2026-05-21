@@ -39,10 +39,11 @@ const APP_ENV =
   process.env.NEXT_PUBLIC_ACTIVE_THEME?.toLowerCase().trim() || 'credebl'
 
 const APP_CONFIG = {
-  logo: (theme: string, resolvedTheme: string): string =>
-    (resolvedTheme === 'dark'
+  logo(theme: string, resolvedTheme: string): string {
+    return resolvedTheme === 'dark'
       ? `/logos/${theme}_logo_dark.svg`
-      : `/logos/${theme}_logo.svg`),
+      : `/logos/${theme}_logo.svg`
+  },
   collapsedLogo: (theme: string): string => `/favicons/favicon-${theme}.ico`,
   poweredBy: (theme: string): { src: string; alt: string } | null => {
     if (theme === 'credebl') {
