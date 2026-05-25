@@ -18,6 +18,18 @@ import {
   getOrgUsageSummary,
   refreshMarketplaceSubscription,
 } from '@/app/api/marketplace'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
+import {
+  marketplacePlanCatalog,
+  marketplaceSetupFeeUsd,
+} from '@/config/marketplacePlans'
 import { useCallback, useEffect, useState } from 'react'
 import { AxiosResponse } from 'axios'
 import { Button } from '@/components/ui/button'
@@ -43,9 +55,65 @@ const formatLimit = (value?: number | null): string => {
   return new Intl.NumberFormat('en-US').format(value)
 }
 
+const formatUsd = (value: number): string =>
+  new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+    maximumFractionDigits: 0,
+  }).format(value)
+
 interface PlanLimitRow {
   label: string
   value?: number | null
+}
+
+function MarketplacePricingCard(): React.JSX.Element {
+  return (
+    <Card className="rounded-md">
+      <CardHeader>
+        <CardTitle>Marketplace pricing</CardTitle>
+        <CardDescription>
+          A one-time setup fee of {formatUsd(marketplaceSetupFeeUsd)} is billed
+          during the first organization setup. Standard monthly plan billing
+          applies from the next billing month.
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Plan ID</TableHead>
+              <TableHead>Plan name</TableHead>
+              <TableHead>Base monthly</TableHead>
+              <TableHead>Issuance</TableHead>
+              <TableHead>Verification</TableHead>
+              <TableHead>Schemas</TableHead>
+              <TableHead>Organizations</TableHead>
+              <TableHead>Users</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {marketplacePlanCatalog.map((plan) => (
+              <TableRow key={plan.planId}>
+                <TableCell>{plan.planId}</TableCell>
+                <TableCell>{plan.planName}</TableCell>
+                <TableCell>{formatUsd(plan.baseMonthlyPriceUsd)}</TableCell>
+                <TableCell>
+                  {formatLimit(plan.includedIssuanceTransactions)}
+                </TableCell>
+                <TableCell>
+                  {formatLimit(plan.includedVerificationTransactions)}
+                </TableCell>
+                <TableCell>{formatLimit(plan.includedSchemas)}</TableCell>
+                <TableCell>{formatLimit(plan.maxOrganizations)}</TableCell>
+                <TableCell>{formatLimit(plan.maxUsers)}</TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </CardContent>
+    </Card>
+  )
 }
 
 function PlanLimitsCard({
@@ -203,6 +271,8 @@ export function BillingOverview(): React.JSX.Element {
       )}
 
       <MarketplacePlanSummary subscription={subscription || undefined} />
+
+      <MarketplacePricingCard />
 
       <PlanLimitsCard limits={entitlements?.limits} />
 
