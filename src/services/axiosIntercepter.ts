@@ -3,8 +3,10 @@
 import { JwtPayload, jwtDecode } from 'jwt-decode'
 import axios, { AxiosError } from 'axios'
 import { generateAccessToken, logoutUser } from '@/utils/session'
+import { setRefreshToken, setToken } from '@/lib/authSlice'
 
 import { apiStatusCodes } from '@/config/CommonConstant'
+import { getSession } from 'next-auth/react'
 import { store } from '@/lib/store'
 
 interface JwtPaylodCustom extends JwtPayload {
@@ -20,23 +22,40 @@ const EcosystemInstance = axios.create({
 })
 
 export async function logoutAndRedirect(): Promise<void> {
-  generateAccessToken()
+  await generateAccessToken()
 }
 
 instance.interceptors.request.use(
   async (config) => {
     const { auth } = store.getState()
-    if (!auth?.token || !auth?.refreshToken) {
-      return config
+    let token: string | undefined = auth?.token
+    let refreshToken: string | undefined = auth?.refreshToken
+
+    if (!token || !refreshToken) {
+      const session = await getSession()
+      token = session?.accessToken
+      refreshToken = session?.refreshToken
+
+      if (token) {
+        store.dispatch(setToken(token))
+      }
+      if (refreshToken) {
+        store.dispatch(setRefreshToken(refreshToken))
+      }
     }
-    const { token } = auth
+
+    if (!token || !refreshToken) {
+      await logoutUser()
+      throw new Error('Session expired')
+    }
+
     try {
       const currentTime = Math.floor(Date.now() / 1000)
-      const { refreshToken } = auth
       const client = jwtDecode<JwtPaylodCustom>(refreshToken).azp
 
       if (client === process.env.NEXT_PUBLIC_ADMIN_PORTAL_CLIENT_ID) {
-        logoutUser()
+        await logoutUser()
+        throw new Error('Session expired')
       }
       const refreshTokenExp = jwtDecode<JwtPayload>(refreshToken).exp
       const isRefreshTokenExpired = refreshTokenExp
@@ -45,9 +64,9 @@ instance.interceptors.request.use(
       const { exp: accessExp } = jwtDecode<JwtPayload>(token)
       const isExpired = accessExp ? accessExp - currentTime < 1 : true
       if (isExpired && !isRefreshTokenExpired) {
-        await generateAccessToken()
+        const didRefresh = await generateAccessToken()
         const newToken = store.getState().auth?.token
-        if (newToken) {
+        if (didRefresh && newToken) {
           return {
             ...config,
             headers: new axios.AxiosHeaders({
@@ -56,12 +75,21 @@ instance.interceptors.request.use(
             }),
           }
         }
+        await logoutUser()
+        throw new Error('Session expired')
       }
       if (isRefreshTokenExpired) {
-        await generateAccessToken()
+        await logoutUser()
+        throw new Error('Session expired')
       }
     } catch (error) {
-      console.error('Error decoding token:', error)
+      const isSessionExpired =
+        error instanceof Error && error.message === 'Session expired'
+      if (!isSessionExpired) {
+        console.error('Error decoding token:', error)
+        await logoutUser()
+      }
+      throw error
     }
     return {
       ...config,

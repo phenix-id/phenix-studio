@@ -17,6 +17,7 @@ import { Button } from '@/components/ui/button'
 import { DeleteIcon } from '@/config/svgs/DeleteIcon'
 import { Edit } from 'lucide-react'
 import { apiStatusCodes } from '@/config/CommonConstant'
+import { hardNavigate } from '@/utils/navigation'
 import { useAppSelector } from '@/lib/hooks'
 import { useRouter } from 'next/navigation'
 
@@ -41,16 +42,15 @@ export const OrganizationDashboard = ({
   const selectedDropdownOrgId = useAppSelector(
     (state) => state.organization.orgId,
   )
-  const activeOrgId = selectedDropdownOrgId ?? orgId
-  const orgIdOfDashboard = orgId
+  const activeOrgId = selectedDropdownOrgId || orgId
 
   const fetchOrganizationDetails = async (): Promise<void> => {
-    if (!orgId) {
+    if (!activeOrgId) {
       return
     }
 
-    const useOrgId = activeOrgId === orgIdOfDashboard ? orgId : activeOrgId
-    const response = await getOrganizationById(useOrgId)
+    setWalletStatus(false)
+    const response = await getOrganizationById(activeOrgId)
     const { data } = response as AxiosResponse
 
     if (data?.statusCode === apiStatusCodes.API_STATUS_SUCCESS) {
@@ -68,8 +68,8 @@ export const OrganizationDashboard = ({
   }
 
   const fetchOrganizationDashboardDetails = async (): Promise<void> => {
-    if (orgId) {
-      const response = await getOrgDashboard(orgIdOfDashboard)
+    if (activeOrgId) {
+      const response = await getOrgDashboard(activeOrgId)
       const { data } = response as AxiosResponse
 
       if (data?.statusCode === apiStatusCodes.API_STATUS_SUCCESS) {
@@ -81,11 +81,11 @@ export const OrganizationDashboard = ({
   }
 
   const handleEditOrg = (): void => {
-    router.push(`/create-organization?orgId=${orgId}`)
+    hardNavigate(`/create-organization?orgId=${activeOrgId}`)
   }
 
   const handleDeleteOrg = (): void => {
-    router.push(`/delete-organization?orgId=${orgId}`)
+    hardNavigate(`/delete-organization?orgId=${activeOrgId}`)
   }
 
   useEffect(() => {

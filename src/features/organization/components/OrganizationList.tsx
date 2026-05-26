@@ -10,7 +10,12 @@ import {
   PaginationPrevious,
 } from '@/components/ui/pagination'
 import React, { useEffect, useState } from 'react'
-import { setOrgId, setOrgInfo, setTenantData } from '@/lib/orgSlice'
+import {
+  setOrgId,
+  setOrgInfo,
+  setSelectedOrgId,
+  setTenantData,
+} from '@/lib/orgSlice'
 
 import { AxiosResponse } from 'axios'
 import { Button } from '@/components/ui/button'
@@ -21,8 +26,8 @@ import { Organization } from '@/features/dashboard/type/organization'
 import { Plus } from 'lucide-react'
 import { apiStatusCodes } from '@/config/CommonConstant'
 import { getOrganizations } from '@/app/api/organization'
+import { hardNavigate } from '@/utils/navigation'
 import { useAppDispatch } from '@/lib/hooks'
-import { useRouter } from 'next/navigation'
 
 export const OrganizationList = (): React.JSX.Element => {
   const [organizationsList, setOrganizationsList] = useState<Organization[]>([])
@@ -37,7 +42,6 @@ export const OrganizationList = (): React.JSX.Element => {
     totalCount: 0,
   })
 
-  const router = useRouter()
   const dispatch = useAppDispatch()
 
   const getAllOrganizations = async (): Promise<void> => {
@@ -95,6 +99,7 @@ export const OrganizationList = (): React.JSX.Element => {
 
     if (selectedOrg) {
       dispatch(setOrgId(selectedOrg.id))
+      dispatch(setSelectedOrgId(selectedOrg.id))
       dispatch(
         setTenantData({
           id: selectedOrg.id,
@@ -115,13 +120,13 @@ export const OrganizationList = (): React.JSX.Element => {
       )
     }
 
-    router.push(`/${orgId}`)
+    hardNavigate(`/${orgId}`)
   }
   const handleCreateOrg = (): void => {
     setIsCreatingOrg(true)
 
     setTimeout(() => {
-      router.push('/create-organization')
+      hardNavigate('/create-organization')
     }, 300)
   }
 
