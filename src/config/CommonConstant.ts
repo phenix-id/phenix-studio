@@ -132,12 +132,18 @@ export const sessionExcludedPaths = [
 ]
 
 const imageBasePath = '/images'
+const logoBasePath = '/logos'
 
-export const CredeblLogo = `${imageBasePath}/CREDEBL_Logo_Web.svg`
+export const appLogoPath = `${logoBasePath}/Phenix_Logo.png`
+export const appFaviconPath = `${logoBasePath}/favicon.png`
+export const appLogoAltText = 'Phenix Logo'
+export const appLogoWidth = 781
+export const appLogoHeight = 204
+export const CredeblLogo = appLogoPath
 export const signInImg = `${imageBasePath}/signin.svg`
 export const closeIconImg = `${imageBasePath}/close_icon.svg`
-export const CredeblLogoWidth = 170
-export const CredeblLogoHeight = 140
+export const CredeblLogoWidth = appLogoWidth
+export const CredeblLogoHeight = appLogoHeight
 
 export const signInWidth = 500
 export const signInHeight = 500
@@ -245,7 +251,8 @@ export const bulkIssuanceApiParameter = {
   allSearch: '',
 }
 
-export const defaultCredeblFooterText = 'Phenix ID. All rights reserved.'
+export const defaultFooterText = 'Phenix ID. All rights reserved.'
+export const defaultCredeblFooterText = defaultFooterText
 
 export const InfoText = {
   DIDCommInfoText:
