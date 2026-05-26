@@ -23,10 +23,10 @@ import PageContainer from '@/components/layout/page-container'
 import { apiStatusCodes } from '@/config/CommonConstant'
 import { getEcosystemEnableStausApi } from '@/app/api/ecosystem'
 import { getOrganizationById } from '@/app/api/organization'
+import { hardNavigate } from '@/utils/navigation'
 import { pathRoutes } from '@/config/pathRoutes'
 import { setEcosystemEnableStatus } from '@/lib/ecosystemSlice'
 import { setLedgerId } from '@/lib/orgSlice'
-import { useRouter } from 'next/navigation'
 
 const initialPageState = {
   pageNumber: 1,
@@ -51,7 +51,6 @@ export default function Dashboard(): React.JSX.Element {
   const orgId = useAppSelector((state) => state?.organization.orgId)
 
   const dispatch = useAppDispatch()
-  const router = useRouter()
   const firstName = useAppSelector((state) => state.profile.firstName)
 
   const getAllInvitations = async (): Promise<void> => {
@@ -163,8 +162,13 @@ export default function Dashboard(): React.JSX.Element {
   }, [orgId])
 
   const handleCreateWallet = (): void => {
+    if (!orgId) {
+      setIsWalletSetupLoading(false)
+      return
+    }
+
     setIsWalletSetupLoading(true)
-    router.push(`wallet-setup?orgId=${orgId}`)
+    hardNavigate(`/wallet-setup?orgId=${encodeURIComponent(orgId)}`)
   }
 
   const [currentWallet] = walletData || []
@@ -236,7 +240,9 @@ export default function Dashboard(): React.JSX.Element {
             </p>
           </div>
           <Button
-            onClick={() => router.push(`create-did?orgId=${orgId}`)}
+            onClick={() =>
+              hardNavigate(`/create-did?orgId=${encodeURIComponent(orgId)}`)
+            }
             className="min-w-[180px]"
           >
             Setup Your DID
