@@ -19,7 +19,13 @@ import {
   SidebarMenuSubItem,
   SidebarRail,
 } from '@/components/ui/sidebar'
-import { currentPageNumber, itemPerPage } from '@/config/CommonConstant'
+import {
+  appFaviconPath,
+  appLogoAltText,
+  appLogoPath,
+  currentPageNumber,
+  itemPerPage,
+} from '@/config/CommonConstant'
 import { setOrgId, setOrgInfo } from '@/lib/orgSlice'
 import { useAppDispatch, useAppSelector } from '@/lib/hooks'
 import { usePathname, useRouter } from 'next/navigation'
@@ -33,23 +39,17 @@ import { Organization } from '@/features/dashboard/type/organization'
 import { getOrganizations } from '@/app/api/organization'
 import { navItems } from '@/constants/data'
 import { setSidebarCollapsed } from '@/lib/sidebarSlice'
-import { useTheme } from 'next-themes'
-
-const APP_ENV =
-  process.env.NEXT_PUBLIC_ACTIVE_THEME?.toLowerCase().trim() || 'credebl'
 
 const APP_CONFIG = {
-  logo(theme: string, resolvedTheme: string): string {
-    return resolvedTheme === 'dark'
-      ? `/logos/${theme}_logo_dark.svg`
-      : `/logos/${theme}_logo.svg`
-  },
-  collapsedLogo: (theme: string): string => `/favicons/favicon-${theme}.ico`,
-  poweredBy: (theme: string): { src: string; alt: string } | null => {
-    if (theme === 'credebl') {
+  logo: appLogoPath,
+  collapsedLogo: appFaviconPath,
+  poweredBy: (): { src: string; alt: string } | null => {
+    const activeTheme =
+      process.env.NEXT_PUBLIC_ACTIVE_THEME?.toLowerCase().trim() || 'credebl'
+    if (activeTheme === 'credebl') {
       return null
     }
-    return { src: '/images/CREDEBL_Logo_Web.svg', alt: 'Powered by CREDEBL' }
+    return { src: appLogoPath, alt: 'Powered by Phenix' }
   },
 }
 
@@ -57,12 +57,11 @@ export default function AppSidebar(): React.JSX.Element {
   const router = useRouter()
   const pathname = usePathname()
 
-  const { resolvedTheme } = useTheme()
   const dispatch = useAppDispatch()
 
-  const logoImageSrc = APP_CONFIG.logo(APP_ENV, resolvedTheme || 'light')
-  const collapsedLogoImageSrc = APP_CONFIG.collapsedLogo(APP_ENV)
-  const poweredBy = APP_CONFIG.poweredBy(APP_ENV)
+  const logoImageSrc = APP_CONFIG.logo
+  const collapsedLogoImageSrc = APP_CONFIG.collapsedLogo
+  const poweredBy = APP_CONFIG.poweredBy()
 
   const [currentPage] = useState(currentPageNumber)
   const [pageSize] = useState(itemPerPage)
@@ -155,7 +154,7 @@ export default function AppSidebar(): React.JSX.Element {
               <Image
                 height={40}
                 width={150}
-                alt="Full Logo"
+                alt={appLogoAltText}
                 className="h-auto max-h-[100px] w-auto object-contain"
                 src={logoImageSrc}
               />
@@ -165,7 +164,7 @@ export default function AppSidebar(): React.JSX.Element {
               <Image
                 height={40}
                 width={40}
-                alt="Collapsed Logo"
+                alt={appLogoAltText}
                 className="h-full w-full object-contain"
                 src={collapsedLogoImageSrc}
               />
@@ -248,7 +247,7 @@ export default function AppSidebar(): React.JSX.Element {
         <div className="text-muted-foreground flex items-center justify-center border-t p-3 text-sm group-data-[collapsed=true]:flex-col group-data-[collapsed=true]:gap-1">
           {!isCollapsed ? (
             <Image
-              src={'/favicons/favicon-credebl.ico'}
+              src={appFaviconPath}
               alt={poweredBy.alt}
               width={30}
               height={30}
