@@ -1,5 +1,7 @@
 import './globals.css'
 import './theme.css'
+import type { Metadata, Viewport } from 'next'
+
 import { FaviconUpdater } from '@/components/FaviconUpdater'
 import { Session as NextAuthSession } from 'next-auth'
 import NextTopLoader from 'nextjs-toploader'
@@ -10,7 +12,7 @@ import React from 'react'
 import { SessionManager } from '@/features/components/SessionManager'
 import StoreProvider from './StoreProvider'
 import { Toaster } from '@/components/ui/sonner'
-import type { Viewport } from 'next'
+import { appFaviconPath } from '@/config/CommonConstant'
 import { authOptions } from '@/utils/authOptions'
 import { cn } from '@/lib/utils'
 import { cookies } from 'next/headers'
@@ -24,9 +26,19 @@ const META_THEME_COLORS = {
   light: '#ffffff',
   dark: '#09090b',
 }
+const SESSION_FALLBACK_DURATION_MS = 1000 * 60 * 30
 
 export const viewport: Viewport = {
   themeColor: META_THEME_COLORS.light,
+}
+
+export const metadata: Metadata = {
+  title: process.env.NEXT_PUBLIC_APP_TITLE?.trim() || 'Phenix Studio',
+  icons: {
+    icon: [{ url: appFaviconPath, type: 'image/png' }],
+    shortcut: [{ url: appFaviconPath, type: 'image/png' }],
+    apple: [{ url: appFaviconPath, type: 'image/png' }],
+  },
 }
 
 export default async function RootLayout({
@@ -44,7 +56,7 @@ export default async function RootLayout({
         ...sessionRaw,
         expires:
           sessionRaw.expires ??
-          new Date(Date.now() + 1000 * 60 * 30).toISOString(),
+          new Date(Date.now() + SESSION_FALLBACK_DURATION_MS).toISOString(),
       }
     : null
 

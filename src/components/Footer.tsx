@@ -1,6 +1,6 @@
+import { appLogoPath, defaultFooterText } from '../config/CommonConstant'
 import Image from 'next/image'
 import React from 'react'
-import { defaultCredeblFooterText } from '../config/CommonConstant'
 
 interface IFooter {
   fixed?: boolean
@@ -12,7 +12,7 @@ const Footer: React.FC<IFooter> = ({ fixed = false }) => {
   const footerText =
     configuredFooterText && !configuredFooterText.startsWith('#')
       ? configuredFooterText
-      : defaultCredeblFooterText
+      : defaultFooterText
 
   return (
     <footer
@@ -25,8 +25,8 @@ const Footer: React.FC<IFooter> = ({ fixed = false }) => {
         <div className="mt-1 mb-1 flex items-center justify-center gap-2">
           <span>Powered by</span>
           <Image
-            src="/images/CREDEBL_Logo_Web.svg"
-            alt="Powered by CREDEBL"
+            src={appLogoPath}
+            alt="Powered by Phenix"
             width={90}
             height={30}
             className="h-5 w-auto object-contain"

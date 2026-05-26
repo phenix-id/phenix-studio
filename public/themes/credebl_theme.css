@@ -52,9 +52,9 @@
     2px 8px 10px -1px hsl(196 83% 10% / 0.15);
   --shadow-2xl: 2px 2px 4px 0px hsl(196 83% 10% / 0.38);
 
-  --logo-light: '/logos/credebl_light.svg';
-  --logo-dark: '/logos/credebl_dark.svg';
-  --favicon: '/favicons/favicon-credebl.ico';
+  --logo-light: '/logos/Phenix_Logo.png';
+  --logo-dark: '/logos/Phenix_Logo.png';
+  --favicon: '/logos/favicon.png';
 }
 
 /* Dark mode overrides */

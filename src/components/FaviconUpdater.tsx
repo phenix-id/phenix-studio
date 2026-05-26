@@ -2,12 +2,13 @@
 
 import { JSX, useEffect } from 'react'
 
-const APP_ENV = process.env.NEXT_PUBLIC_ACTIVE_THEME?.toLowerCase().trim()
+import { appFaviconPath } from '@/config/CommonConstant'
+
 const APP_TITLE = process.env.NEXT_PUBLIC_APP_TITLE?.trim()
 
 const DEFAULT_CONFIG = {
-  favicon: `/favicons/favicon-${APP_ENV || 'credebl'}.ico`,
-  title: APP_TITLE ? APP_TITLE : 'CREDEBL - Studio',
+  favicon: appFaviconPath,
+  title: APP_TITLE ? APP_TITLE : 'Phenix Studio',
 }
 
 export function FaviconUpdater(): JSX.Element | null {
@@ -23,7 +24,7 @@ export function FaviconUpdater(): JSX.Element | null {
       // Add new favicon
       const link = document.createElement('link')
       link.rel = 'icon'
-      link.type = 'image/x-icon'
+      link.type = 'image/png'
       link.href = favicon
       document.head.appendChild(link)
 
