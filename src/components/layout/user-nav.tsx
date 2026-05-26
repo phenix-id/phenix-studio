@@ -23,6 +23,7 @@ import { apiRoutes } from '@/config/apiRoutes'
 import { apiStatusCodes } from '@/config/CommonConstant'
 import { generateAccessToken } from '@/utils/session'
 import { getUserProfile } from '@/app/api/Auth'
+import { hardNavigate } from '@/utils/navigation'
 import { logout } from '@/lib/authSlice'
 import { pathRoutes } from '@/config/pathRoutes'
 import { persistor } from '@/lib/store'
@@ -32,11 +33,9 @@ import { setUserProfileDetails } from '@/lib/userSlice'
 import { signOut } from 'next-auth/react'
 import { useAppSelector } from '@/lib/hooks'
 import { useDispatch } from 'react-redux'
-import { useRouter } from 'next/navigation'
 
 export function UserNav(): React.JSX.Element | null {
   const dispatch = useDispatch()
-  const router = useRouter()
 
   const [userProfile, setUserProfile] = useState<IUserProfile | null>(null)
   const token = useAppSelector((state) => state.auth.token)
@@ -151,18 +150,18 @@ export function UserNav(): React.JSX.Element | null {
         <DropdownMenuSeparator />
 
         <DropdownMenuGroup>
-          <DropdownMenuItem onClick={() => router.push('/profile')}>
+          <DropdownMenuItem onClick={() => hardNavigate('/profile')}>
             Profile
           </DropdownMenuItem>
 
-          <DropdownMenuItem onClick={() => router.push('/developers-setting')}>
+          <DropdownMenuItem onClick={() => hardNavigate('/developers-setting')}>
             Developer Settings
           </DropdownMenuItem>
 
           {process.env.NEXT_PUBLIC_ENABLE_BILLING_OPTION?.toLowerCase() ===
             'true' && (
             <DropdownMenuItem
-              onClick={() => router.push(pathRoutes.organizations.billing)}
+              onClick={() => hardNavigate(pathRoutes.organizations.billing)}
             >
               Billing
             </DropdownMenuItem>

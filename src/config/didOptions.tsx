@@ -25,13 +25,13 @@ export const protocolOptions = [
     ),
   },
   {
-    id: 'oid4vc',
-    title: 'OID4VC',
-    desc: 'Use OpenID Connect-based verifiable credential exchange.',
+    id: 'oid4vp',
+    title: 'OpenID4VP',
+    desc: 'Use OpenID for Verifiable Presentations.',
     icon: (
       <img
         src="/images/oid4vc_logo.png"
-        alt="OID4VC Logo"
+        alt="OpenID4VP Logo"
         className="h-10 w-30"
       />
     ),
@@ -55,18 +55,19 @@ export const subOptionsMap = {
     },
   ],
 
-  oid4vc: [
+  oid4vp: [
     {
       id: 'mdoc',
-      title: 'MDOC',
-      desc: 'Mobile Document (ISO/IEC 18013-5) via OID4VC.',
-      tooltip: 'MDOC follows ISO/IEC mobile identity standard.',
+      title: 'ISO mdoc',
+      desc: 'ISO/IEC 18013-5 mobile document format for OpenID4VP.',
+      tooltip: 'ISO mdoc follows the ISO/IEC 18013-5 mobile identity standard.',
     },
     {
       id: 'sdjwt',
-      title: 'SD-JWT',
-      desc: 'Selective Disclosure JWT-based credentials for OID4VC.',
-      tooltip: 'SD-JWT supports selective disclosure with JWT format.',
+      title: 'SD-JWT VC',
+      desc: 'Selective Disclosure JWT Verifiable Credential format for OpenID4VP.',
+      tooltip:
+        'SD-JWT VC supports selective disclosure using a JWT-based credential format.',
     },
   ],
 }
@@ -85,4 +86,6 @@ export const didOptionsMap: Record<string, string[]> = {
     'did:key',
     'did:web',
   ],
+  mdoc: ['did:key', 'did:web'],
+  sdjwt: ['did:key', 'did:web'],
 }

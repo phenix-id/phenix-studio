@@ -1,19 +1,27 @@
 'use client'
+/* eslint-disable sort-imports */
 
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import React, { useState } from 'react'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useSearchParams } from 'next/navigation'
 
 import { AlertComponent } from '@/components/AlertComponent'
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
-import DedicatedAgentForm from './DedicatedAgentForm'
 import { Label } from '@/components/ui/label'
 import { Loader } from 'lucide-react'
 import SharedAgentForm from './SharedAgentForm'
 import Stepper from '@/components/StepperComponent'
 import { apiStatusCodes } from '@/config/CommonConstant'
+import { hardNavigate } from '@/utils/navigation'
+import { useAppSelector } from '@/lib/hooks'
+
+const isValidUuid = (value: string): boolean =>
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+    value,
+  )
 
 export enum AgentType {
   SHARED = 'shared',
@@ -42,16 +50,13 @@ const WalletSetup = (): React.JSX.Element => {
   const totalSteps = 4
   const [sharedWalletResponse, setSharedWalletResponse] =
     useState<WalletResponse | null>()
-  const [dedicatedWalletResponse, setDedicatedWalletResponse] =
-    useState<WalletResponse | null>(null)
   const [activeButton, setActiveButton] = useState<'skip' | 'continue' | null>(
     null,
   )
-  const router = useRouter()
   const searchParams = useSearchParams()
-  const orgId = searchParams.get('orgId') ?? ''
+  const selectedOrgId = useAppSelector((state) => state.organization.orgId)
+  const orgId = (searchParams.get('orgId') || selectedOrgId || '').trim()
   const clientAlias = searchParams.get('clientAlias')
-  const isVerifierClient = clientAlias?.trim().toUpperCase() === 'VERIFIER'
   const redirectTo = searchParams.get('redirectTo')
 
   const handleSharedWalletCreated = (response?: WalletResponse): void => {
@@ -63,16 +68,13 @@ const WalletSetup = (): React.JSX.Element => {
     }
   }
 
-  const handleDedicatedWalletCreated = (response?: WalletResponse): void => {
-    setDedicatedWalletResponse(response ?? null)
-    if (response?.statusCode === apiStatusCodes.API_STATUS_CREATED) {
-      setIsDialogOpen(true)
-    } else {
-      setAlert(response?.message || 'Failed to create dedicated wallet')
-    }
-  }
-
   const handleContinue = (): void => {
+    if (!orgId || !isValidUuid(orgId)) {
+      setAlert('Please select an organization before continuing.')
+      hardNavigate('/organizations')
+      return
+    }
+
     const redirectUrl =
       redirectTo && clientAlias
         ? `/create-did?orgId=${orgId}&redirectTo=${encodeURIComponent(
@@ -80,24 +82,10 @@ const WalletSetup = (): React.JSX.Element => {
           )}&clientAlias=${clientAlias}`
         : `/create-did?orgId=${orgId}`
 
-    router.push(redirectUrl)
+    hardNavigate(redirectUrl)
   }
 
-  const isAnyWalletCreated = Boolean(
-    sharedWalletResponse || dedicatedWalletResponse,
-  )
-
-  const getLabelClasses = (): string => {
-    if (isVerifierClient) {
-      return 'cursor-not-allowed opacity-50'
-    }
-
-    if (agentType === AgentType.DEDICATED) {
-      return 'border-blue-500 bg-blue-50 shadow-md'
-    }
-    return 'border-gray-200 hover:border-blue-300'
-  }
-  const labelClasses = getLabelClasses()
+  const isAnyWalletCreated = Boolean(sharedWalletResponse)
 
   return (
     <div className="mx-auto mt-10 max-w-5xl">
@@ -134,7 +122,7 @@ const WalletSetup = (): React.JSX.Element => {
           <RadioGroup
             value={agentType}
             onValueChange={(value) => {
-              if (!isAnyWalletCreated) {
+              if (!isAnyWalletCreated && value === AgentType.SHARED) {
                 setAgentType(value as AgentType)
               }
             }}
@@ -142,22 +130,29 @@ const WalletSetup = (): React.JSX.Element => {
           >
             <Label
               htmlFor="dedicated"
-              className={`cursor-pointer rounded-2xl border p-5 transition-all ${labelClasses}`}
+              aria-disabled="true"
+              className="bg-muted/40 cursor-not-allowed rounded-2xl border border-dashed border-gray-300 p-5 opacity-70 transition-all"
             >
               <div className="flex items-start space-x-3">
                 <RadioGroupItem
                   id="dedicated"
                   className="border"
                   value={AgentType.DEDICATED}
-                  disabled={isVerifierClient}
+                  disabled
                 />
 
                 <div>
-                  <h3 className="mb-1 font-semibold text-gray-800">
-                    Dedicated Agent
-                  </h3>
+                  <div className="mb-1 flex flex-wrap items-center gap-2">
+                    <h3 className="font-semibold text-gray-800">
+                      Dedicated Agent
+                    </h3>
+                    <Badge variant="outline" className="rounded-full">
+                      Coming soon
+                    </Badge>
+                  </div>
                   <p className="text-sm text-gray-600">
-                    Private agent instance exclusively for your organization
+                    Dedicated agent creation is not available for SaaS
+                    workspaces yet.
                   </p>
                   <ul className="mt-2 ml-5 list-disc space-y-1 text-sm text-gray-600">
                     <li>Higher performance and reliability</li>
@@ -200,17 +195,11 @@ const WalletSetup = (): React.JSX.Element => {
           </RadioGroup>
 
           <div className="mt-10">
-            {agentType === AgentType.DEDICATED ? (
-              <DedicatedAgentForm
-                orgId={orgId}
-                onSuccess={handleDedicatedWalletCreated}
-              />
-            ) : (
-              <SharedAgentForm
-                orgId={orgId}
-                onSuccess={handleSharedWalletCreated}
-              />
-            )}
+            <SharedAgentForm
+              orgId={orgId}
+              onSuccess={handleSharedWalletCreated}
+              disabled={!orgId || !isValidUuid(orgId)}
+            />
           </div>
         </div>
       </Card>
@@ -256,7 +245,7 @@ const WalletSetup = (): React.JSX.Element => {
                 variant="outline"
                 onClick={() => {
                   setActiveButton('skip')
-                  router.push('/dashboard')
+                  hardNavigate('/dashboard')
                 }}
                 className="px-6"
                 disabled={activeButton !== null}

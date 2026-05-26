@@ -1,4 +1,5 @@
 'use client'
+/* eslint-disable sort-imports */
 
 import {
   Card,
@@ -22,7 +23,7 @@ import {
   protocolOptions,
   subOptionsMap,
 } from '@/config/didOptions'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useSearchParams } from 'next/navigation'
 
 import { AlertComponent } from '@/components/AlertComponent'
 import type { AxiosResponse } from 'axios'
@@ -34,7 +35,15 @@ import SetPrivateKeyValueInput from './SetPrivateKeyValue'
 import Stepper from '@/components/StepperComponent'
 import TooltipInfo from '@/components/TooltipInfo'
 import { createDid } from '@/app/api/Agent'
+import { getOrganizationById } from '@/app/api/organization'
+import { hardNavigate } from '@/utils/navigation'
+import { useAppSelector } from '@/lib/hooks'
 import { nanoid } from 'nanoid'
+
+const isValidUuid = (value: string): boolean =>
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+    value,
+  )
 
 const CreateDid = (): React.JSX.Element => {
   const [selectedProtocol, setSelectedProtocol] = useState<Protocol | null>(
@@ -49,13 +58,13 @@ const CreateDid = (): React.JSX.Element => {
   const [success, setSuccess] = useState<string | null>(null)
   const [domainValue, setDomainValue] = useState<string>('')
   const [domainError, setDomainError] = useState<string | null>(null)
-  type Protocol = 'didcomm' | 'oid4vc'
+  type Protocol = 'didcomm' | 'oid4vp'
   const [step, setStep] = useState(3)
 
   const totalSteps = 4
   const searchParams = useSearchParams()
-  const orgId = searchParams.get('orgId')
-  const router = useRouter()
+  const selectedOrgId = useAppSelector((state) => state.organization.orgId)
+  const orgId = (searchParams.get('orgId') || selectedOrgId || '').trim()
   const redirectTo = searchParams.get('redirectTo')
   const clientAlias = searchParams.get('clientAlias')
 
@@ -63,6 +72,43 @@ const CreateDid = (): React.JSX.Element => {
     const generatedSeeds = nanoid(32)
     setSeeds(generatedSeeds)
   }, [])
+
+  useEffect(() => {
+    const ensureWalletExists = async (): Promise<void> => {
+      if (!orgId) {
+        return
+      }
+
+      if (!isValidUuid(orgId)) {
+        setAlert('Please select an organization before creating a DID.')
+        setTimeout(() => hardNavigate('/organizations'), 800)
+        return
+      }
+
+      try {
+        const response = await getOrganizationById(orgId)
+        const { data } = response as AxiosResponse
+        const hasWallet = data?.data?.org_agents?.some(
+          (agent: { tenantId?: string | null; walletName?: string | null }) =>
+            Boolean(agent?.tenantId || agent?.walletName),
+        )
+
+        if (
+          data?.statusCode === apiStatusCodes.API_STATUS_SUCCESS &&
+          !hasWallet
+        ) {
+          setAlert(
+            'Please create an organization wallet before creating a DID.',
+          )
+          setTimeout(() => hardNavigate(`/wallet-setup?orgId=${orgId}`), 800)
+        }
+      } catch (error) {
+        console.error('Error checking organization wallet:', error)
+      }
+    }
+
+    ensureWalletExists()
+  }, [orgId])
 
   const validateForm = (): boolean => {
     setDomainError(null)
@@ -82,6 +128,12 @@ const CreateDid = (): React.JSX.Element => {
     return isValid
   }
   const handleSubmit = async (): Promise<void> => {
+    if (!orgId || !isValidUuid(orgId)) {
+      setAlert('Please select an organization before creating a DID.')
+      setTimeout(() => hardNavigate('/organizations'), 800)
+      return
+    }
+
     if (!validateForm()) {
       return
     }
@@ -139,9 +191,9 @@ const CreateDid = (): React.JSX.Element => {
           orgId: orgId || '',
         })
         if (redirectTo && clientAlias) {
-          router.push(redirectTo)
+          hardNavigate(redirectTo)
         } else {
-          router.push(`/did-details?${params.toString()}`)
+          hardNavigate(`/did-details?${params.toString()}`)
         }
       } else {
         setAlert(data?.message || 'Failed to create DID')
@@ -162,6 +214,9 @@ const CreateDid = (): React.JSX.Element => {
   }
 
   const subOptions = subOptionsMap[selectedProtocol!] ?? []
+  const selectedProtocolTitle =
+    protocolOptions.find((option) => option.id === selectedProtocol)?.title ??
+    selectedProtocol?.toUpperCase()
 
   const didOptions = selectedOption ? (didOptionsMap[selectedOption] ?? []) : []
 
@@ -214,48 +269,41 @@ const CreateDid = (): React.JSX.Element => {
                 )}
               </div>
               <div className="mb-8 grid gap-4 md:grid-cols-2">
-                {protocolOptions.map((option) => {
-                  const isDisabled = option.id === 'oid4vc'
-                  return (
-                    <button
-                      key={option.id}
-                      type="button"
-                      onClick={() => {
-                        if (isDisabled) {
-                          return
-                        }
-                        setSelectedProtocol(option.id as Protocol)
-                        setSelectedOption(null)
-                        setSelectedDid(null)
-                        setDomainError(null)
-                      }}
-                      disabled={isDisabled}
-                      className={`relative rounded-xl border-2 p-6 text-left transition-all ${selectedProtocol === option.id ? 'border-primary bg-secondary shadow-sm' : 'border-border bg-background hover:shadow-sm'} ${isDisabled ? 'cursor-not-allowed opacity-50' : ''} `}
-                    >
-                      {option.id === 'didcomm' && (
-                        <TooltipInfo text={InfoText.DIDCommInfoText} />
-                      )}
-                      {option.id === 'oid4vc' && (
-                        <TooltipInfo text={InfoText.OID4VCInfoText} />
-                      )}
+                {protocolOptions.map((option) => (
+                  <button
+                    key={option.id}
+                    type="button"
+                    onClick={() => {
+                      setSelectedProtocol(option.id as Protocol)
+                      setSelectedOption(null)
+                      setSelectedDid(null)
+                      setDomainError(null)
+                    }}
+                    className={`relative rounded-xl border-2 p-6 text-left transition-all ${selectedProtocol === option.id ? 'border-primary bg-secondary shadow-sm' : 'border-border bg-background hover:shadow-sm'}`}
+                  >
+                    {option.id === 'didcomm' && (
+                      <TooltipInfo text={InfoText.DIDCommInfoText} />
+                    )}
+                    {option.id === 'oid4vp' && (
+                      <TooltipInfo text={InfoText.OpenID4VPInfoText} />
+                    )}
 
-                      <div className="mb-6">{option.icon}</div>
+                    <div className="mb-6">{option.icon}</div>
 
-                      <h3 className="text-foreground mb-1 font-semibold">
-                        {option.title}
-                      </h3>
-                      <p className="text-muted-foreground text-sm">
-                        {option.desc}
-                      </p>
-                    </button>
-                  )
-                })}
+                    <h3 className="text-foreground mb-1 font-semibold">
+                      {option.title}
+                    </h3>
+                    <p className="text-muted-foreground text-sm">
+                      {option.desc}
+                    </p>
+                  </button>
+                ))}
               </div>
 
               {selectedProtocol && (
                 <div className="border-border -mx-6 mt-6 border-t px-6 pt-6">
                   <p className="text-foreground mb-2 font-medium">
-                    Select Credential Type for {selectedProtocol.toUpperCase()}
+                    Select Credential Format for {selectedProtocolTitle}
                   </p>
 
                   <div className="grid gap-4 md:grid-cols-2">
@@ -274,17 +322,7 @@ const CreateDid = (): React.JSX.Element => {
                             : 'border-border bg-background hover:border-foreground/30 hover:shadow-sm'
                         }`}
                       >
-                        <TooltipInfo
-                          text={
-                            option.id === 'anoncreds'
-                              ? InfoText.AnonCredsInfoText
-                              : option.id === 'w3c'
-                                ? InfoText.W3CInfoText
-                                : option.id === 'mdoc'
-                                  ? InfoText.MDOCInfoText
-                                  : InfoText.SDJWTInfoText
-                          }
-                        />
+                        <TooltipInfo text={option.tooltip} />
 
                         <h3 className="text-foreground mb-1 font-semibold">
                           {option.title}
@@ -298,7 +336,7 @@ const CreateDid = (): React.JSX.Element => {
                 </div>
               )}
 
-              {selectedProtocol === 'didcomm' && selectedOption && (
+              {selectedOption && (
                 <div className="mt-6">
                   <label className="text-foreground mb-2 block text-sm font-medium">
                     Select DID Method{' '}

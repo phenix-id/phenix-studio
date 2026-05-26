@@ -30,6 +30,7 @@ import PageContainer from '@/components/layout/page-container'
 import { apiStatusCodes } from '@/config/CommonConstant'
 import { deleteConnectionRecords } from '@/app/api/connection'
 import { getOrganizationById } from '@/app/api/organization'
+import { hardNavigate } from '@/utils/navigation'
 import { pathRoutes } from '@/config/pathRoutes'
 import { toast } from 'sonner'
 import { useAppDispatch } from '@/lib/hooks'
@@ -38,6 +39,29 @@ interface IOrgCount {
   verificationRecordsCount?: number
   issuanceRecordsCount?: number
   connectionRecordsCount?: number
+}
+
+const getErrorMessage = (error: unknown, fallback: string): string => {
+  if (typeof error === 'string') {
+    return error
+  }
+
+  if (error instanceof Error) {
+    return error.message
+  }
+
+  const possibleResponse = error as {
+    data?: { message?: string; error?: string }
+    response?: { data?: { message?: string; error?: string } }
+  }
+
+  return (
+    possibleResponse?.response?.data?.message ??
+    possibleResponse?.response?.data?.error ??
+    possibleResponse?.data?.message ??
+    possibleResponse?.data?.error ??
+    fallback
+  )
 }
 
 export default function DeleteOrganizationPage(): React.JSX.Element {
@@ -108,7 +132,9 @@ export default function DeleteOrganizationPage(): React.JSX.Element {
       }
     } catch (error) {
       console.error('An error occurred:', error)
-      setError(error as string)
+      setError(
+        getErrorMessage(error, 'Failed to fetch organization references'),
+      )
     }
     setLoading(false)
   }
@@ -124,13 +150,13 @@ export default function DeleteOrganizationPage(): React.JSX.Element {
     setDeleteLoading(true)
     try {
       await deleteFunc()
-      await fetchOrganizationReferences()
       setShowPopup(false)
     } catch (error) {
       console.error('An error occurred:', error)
-      setError(error as string)
+      setError(getErrorMessage(error, 'Delete failed'))
+    } finally {
+      setDeleteLoading(false)
     }
-    setDeleteLoading(false)
   }
 
   const deleteVerifications = async (): Promise<void> => {
@@ -144,11 +170,14 @@ export default function DeleteOrganizationPage(): React.JSX.Element {
         await fetchOrganizationReferences()
         setShowPopup(false)
       } else {
-        setError(response as string)
+        throw new Error(
+          data?.message || 'Failed to delete verification records',
+        )
       }
     } catch (error) {
       console.error('An error occurred:', error)
-      setError(error as string)
+      setError(getErrorMessage(error, 'Failed to delete verification records'))
+      throw error
     }
     setDeleteLoading(false)
   }
@@ -164,11 +193,12 @@ export default function DeleteOrganizationPage(): React.JSX.Element {
         await fetchOrganizationReferences()
         setShowPopup(false)
       } else {
-        setError(response as string)
+        throw new Error(data?.message || 'Failed to delete issuance records')
       }
     } catch (error) {
       console.error('An error occurred:', error)
-      setError(error as string)
+      setError(getErrorMessage(error, 'Failed to delete issuance records'))
+      throw error
     }
     setDeleteLoading(false)
   }
@@ -184,11 +214,12 @@ export default function DeleteOrganizationPage(): React.JSX.Element {
         await fetchOrganizationReferences()
         setShowPopup(false)
       } else {
-        setError(response as string)
+        throw new Error(data?.message || 'Failed to delete connection records')
       }
     } catch (error) {
       console.error('An error occurred:', error)
-      setError(error as string)
+      setError(getErrorMessage(error, 'Failed to delete connection records'))
+      throw error
     }
     setDeleteLoading(false)
   }
@@ -204,11 +235,12 @@ export default function DeleteOrganizationPage(): React.JSX.Element {
         await fetchOrganizationReferences()
         setShowPopup(false)
       } else {
-        setError(response as string)
+        throw new Error(data?.message || 'Failed to delete organization wallet')
       }
     } catch (error) {
       console.error('An error occurred:', error)
-      setError(error as string)
+      setError(getErrorMessage(error, 'Failed to delete organization wallet'))
+      throw error
     }
   }
 
@@ -220,16 +252,16 @@ export default function DeleteOrganizationPage(): React.JSX.Element {
       if (data?.statusCode === apiStatusCodes.API_STATUS_SUCCESS) {
         toast.success(data?.message)
         dispatch(resetOrgState())
-        await fetchOrganizationReferences()
         setShowPopup(false)
         dispatch(setTenantData(null))
-        router.push(pathRoutes.users.dashboard)
+        hardNavigate(pathRoutes.organizations.root, true)
       } else {
-        setError(response as string)
+        throw new Error(data?.message || 'Failed to delete organization')
       }
     } catch (error) {
       console.error('An error occurred:', error)
-      setError(error as string)
+      setError(getErrorMessage(error, 'Failed to delete organization'))
+      throw error
     }
   }
 

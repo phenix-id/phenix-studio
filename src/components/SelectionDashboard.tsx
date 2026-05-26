@@ -5,16 +5,15 @@ import React, { JSX } from 'react'
 import BackButton from '@/components/BackButton'
 import { Card } from '@/components/ui/card'
 import { IDashboard } from './types/Dashboard'
+import { hardNavigate } from '@/utils/navigation'
 import { setVerificationRouteType } from '@/lib/verificationSlice'
 import { useAppDispatch } from '@/lib/hooks'
-import { useRouter } from 'next/navigation'
 
 const SelectionDashboard = ({
   title,
   options,
   backButtonPath,
 }: IDashboard): JSX.Element => {
-  const router = useRouter()
   const dispatch = useAppDispatch()
 
   const handleCardClick = (option: {
@@ -23,7 +22,7 @@ const SelectionDashboard = ({
   }): void => {
     if (option.path) {
       dispatch(setVerificationRouteType(option.heading))
-      router.push(option.path)
+      hardNavigate(option.path)
     }
   }
   return (

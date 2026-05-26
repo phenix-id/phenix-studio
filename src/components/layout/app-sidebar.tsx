@@ -1,4 +1,5 @@
 'use client'
+/* eslint-disable sort-imports */
 
 import {
   Collapsible,
@@ -26,9 +27,15 @@ import {
   currentPageNumber,
   itemPerPage,
 } from '@/config/CommonConstant'
-import { setOrgId, setOrgInfo } from '@/lib/orgSlice'
+import {
+  resetOrgState,
+  setOrgId,
+  setOrgInfo,
+  setSelectedOrgId,
+  setTenantData,
+} from '@/lib/orgSlice'
 import { useAppDispatch, useAppSelector } from '@/lib/hooks'
-import { usePathname, useRouter } from 'next/navigation'
+import { usePathname } from 'next/navigation'
 
 import { IconChevronRight } from '@tabler/icons-react'
 import { Icons } from '../icons'
@@ -37,6 +44,7 @@ import Link from 'next/link'
 import { NavItem } from '../../../types'
 import { Organization } from '@/features/dashboard/type/organization'
 import { getOrganizations } from '@/app/api/organization'
+import { hardNavigate } from '@/utils/navigation'
 import { navItems } from '@/constants/data'
 import { setSidebarCollapsed } from '@/lib/sidebarSlice'
 
@@ -54,7 +62,6 @@ const APP_CONFIG = {
 }
 
 export default function AppSidebar(): React.JSX.Element {
-  const router = useRouter()
   const pathname = usePathname()
 
   const dispatch = useAppDispatch()
@@ -93,18 +100,35 @@ export default function AppSidebar(): React.JSX.Element {
         ) {
           const orgs = response.data.data.organizations
 
-          if (!selectedOrgId && orgs.length > 0) {
-            const [firstOrg]: Organization[] = orgs
+          if (orgs.length === 0) {
+            dispatch(resetOrgState())
+            return
+          }
 
-            dispatch(setOrgId(firstOrg?.id))
+          const selectedOrg = orgs.find(
+            (org: Organization) => org.id === selectedOrgId,
+          )
+          const [firstOrg]: Organization[] = orgs
+          const nextOrg = selectedOrg ?? firstOrg
+
+          if (!selectedOrgId || selectedOrgId !== nextOrg.id) {
+            dispatch(setOrgId(nextOrg.id))
+            dispatch(setSelectedOrgId(nextOrg.id))
+            dispatch(
+              setTenantData({
+                id: nextOrg.id,
+                name: nextOrg.name,
+                logoUrl: nextOrg.logoUrl,
+              }),
+            )
             dispatch(
               setOrgInfo({
-                id: firstOrg?.id,
-                name: firstOrg?.name,
-                description: firstOrg?.description,
-                logoUrl: firstOrg?.logoUrl,
+                id: nextOrg.id,
+                name: nextOrg.name,
+                description: nextOrg.description,
+                logoUrl: nextOrg.logoUrl,
                 roles:
-                  firstOrg?.userOrgRoles?.map(
+                  nextOrg.userOrgRoles?.map(
                     (role: { orgRole: { name: string } }) =>
                       role?.orgRole?.name,
                   ) || [],
@@ -145,7 +169,7 @@ export default function AppSidebar(): React.JSX.Element {
     <Sidebar collapsible="icon">
       <SidebarHeader className="group" data-collapsed>
         <button
-          onClick={() => router.push('/dashboard')}
+          onClick={() => hardNavigate('/dashboard')}
           className="focus-visible:ring-primary relative cursor-pointer rounded transition-all duration-300 focus:outline-none focus-visible:ring-2"
           aria-label="Go to dashboard"
         >

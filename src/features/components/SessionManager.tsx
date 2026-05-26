@@ -1,13 +1,10 @@
 'use client'
 
 import { setRefreshToken, setSessionId, setToken } from '@/lib/authSlice'
+import { useAppDispatch, useAppSelector } from '@/lib/hooks'
+import { useCallback, useEffect, useState } from 'react'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
-
-import { apiRoutes } from '@/config/apiRoutes'
 import { generateAccessToken } from '@/utils/session'
-import { passwordValueEncryption } from '@/utils/passwordEncryption'
-import { useAppDispatch } from '@/lib/hooks'
-import { useEffect } from 'react'
 import { useSession } from 'next-auth/react'
 
 const preventRedirectOnPaths = [
@@ -57,81 +54,97 @@ export const SessionManager = ({
   const searchParams = useSearchParams()
   const pathname = usePathname()
   const dispatch = useAppDispatch()
+  const auth = useAppSelector((state) => state.auth)
+  const [sessionReady, setSessionReady] = useState(false)
 
   const redirectTo = searchParams.get('redirectTo')
+  const isIgnoreSessionCheck = excludeRouteForSessionCheck.some((page) =>
+    pathname.startsWith(page),
+  )
 
-  const setSessionDetails = (
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    sessionDetails: any,
-    redirectTo: string | null,
-  ): void => {
-    const isOnRestrictedPage = preventRedirectOnPaths.some((page) =>
-      pathname.startsWith(page),
+  const setSessionTokens = useCallback((): boolean => {
+    const sessionId = session?.sessionId
+    const hasStoredTokens = Boolean(auth?.token && auth?.refreshToken)
+    const isSameSession = Boolean(sessionId && auth?.sessionId === sessionId)
+
+    if (sessionId) {
+      dispatch(setSessionId(sessionId))
+    }
+
+    if (hasStoredTokens && isSameSession) {
+      return true
+    }
+
+    if (session?.accessToken) {
+      dispatch(setToken(session.accessToken))
+    }
+    if (session?.refreshToken) {
+      dispatch(setRefreshToken(session.refreshToken))
+    }
+    return Boolean(
+      (hasStoredTokens && isSameSession) ||
+        (session?.accessToken && session?.refreshToken),
     )
-    if (sessionDetails?.data?.sessionToken) {
-      dispatch(setToken(sessionDetails.data.sessionToken))
-    }
-    if (sessionDetails?.data?.refreshToken) {
-      dispatch(setRefreshToken(sessionDetails.data.refreshToken))
-    }
-    if (redirectTo && !isOnRestrictedPage) {
-      window.location.href = redirectTo
-    } else if (!redirectTo && !isOnRestrictedPage) {
-      router.push('/dashboard')
-    }
-  }
+  }, [
+    auth?.refreshToken,
+    auth?.sessionId,
+    auth?.token,
+    dispatch,
+    session?.accessToken,
+    session?.refreshToken,
+    session?.sessionId,
+  ])
 
-  const logoutSession = (): void => {
-    generateAccessToken()
-  }
-
-  const fetchSessionDetails = async (
-    sessionId: string,
-    redirectTo: string | null,
-  ): Promise<void> => {
-    try {
-      const encrypted = await passwordValueEncryption(sessionId)
-      const encoded = encodeURIComponent(encrypted)
-      const resp = await fetch(
-        `${process.env.NEXT_PUBLIC_BASE_URL}${apiRoutes.auth.fetchSessionDetails}?sessionId=${encoded}`,
-        {
-          method: 'GET',
-          headers: { 'Content-Type': 'application/json' },
-        },
-      )
-      const data = await resp.json()
-      if (!data.data) {
-        logoutSession()
-        return
-      }
-      // eslint-disable-next-line
-      setSessionDetails(data, redirectTo)
-    } catch (error) {
-      console.error('Failed to fetch session details: ', error)
-      throw error
-    }
-  }
+  const logoutSession = useCallback(async (): Promise<void> => {
+    await generateAccessToken()
+  }, [])
 
   useEffect(() => {
     if (status === 'loading') {
       return
     }
-    setTimeout(() => {
+    setSessionReady(false)
+    const timeout = setTimeout(() => {
       if (status === 'authenticated' && session?.sessionId) {
-        fetchSessionDetails(session.sessionId, redirectTo)
-        dispatch(setSessionId(session?.sessionId))
+        const hasSessionTokens = setSessionTokens()
+        if (!hasSessionTokens) {
+          void logoutSession()
+          return
+        } else if (redirectTo) {
+          const isOnRestrictedPage = preventRedirectOnPaths.some((page) =>
+            pathname.startsWith(page),
+          )
+          if (!isOnRestrictedPage) {
+            window.location.href = redirectTo
+          }
+        }
+        setSessionReady(true)
       } else if (status === 'unauthenticated' || session === null) {
-        const isIgnoreSessionCheck = excludeRouteForSessionCheck.some((page) =>
-          pathname.startsWith(page),
-        )
         if (!isIgnoreSessionCheck) {
           router.push('/sign-in')
         }
+      } else {
+        setSessionReady(true)
       }
     }, 500)
-  }, [status, session])
 
-  if (status === 'loading') {
+    return () => clearTimeout(timeout)
+  }, [
+    isIgnoreSessionCheck,
+    logoutSession,
+    pathname,
+    redirectTo,
+    router,
+    session,
+    session?.sessionId,
+    setSessionTokens,
+    status,
+  ])
+
+  if (
+    status === 'loading' ||
+    (status === 'authenticated' && !sessionReady && !isIgnoreSessionCheck)
+  ) {
     return <div>Loading session...</div>
   }
 

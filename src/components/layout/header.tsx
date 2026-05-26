@@ -2,7 +2,12 @@
 
 import React, { useEffect, useState } from 'react'
 import { currentPageNumber, itemPerPage } from '@/config/CommonConstant'
-import { setOrgId, setOrgInfo } from '@/lib/orgSlice'
+import {
+  setOrgId,
+  setOrgInfo,
+  setSelectedOrgId,
+  setTenantData,
+} from '@/lib/orgSlice'
 import { useAppDispatch, useAppSelector } from '@/lib/hooks'
 
 import AppLauncher from '../AppLauncher'
@@ -36,6 +41,14 @@ export default function Header(): React.JSX.Element {
               orgs.find((org: { id: string }) => org.id === tenantId) || orgs[0]
 
             dispatch(setOrgId(defaultOrg.id))
+            dispatch(setSelectedOrgId(defaultOrg.id))
+            dispatch(
+              setTenantData({
+                id: defaultOrg.id,
+                name: defaultOrg.name,
+                logoUrl: defaultOrg.logoUrl,
+              }),
+            )
             dispatch(
               setOrgInfo({
                 id: defaultOrg.id,
@@ -66,6 +79,14 @@ export default function Header(): React.JSX.Element {
     const selected = orgList.find((org) => org.id === orgId)
     if (selected) {
       dispatch(setOrgId(selected.id))
+      dispatch(setSelectedOrgId(selected.id))
+      dispatch(
+        setTenantData({
+          id: selected.id,
+          name: selected.name,
+          logoUrl: selected.logoUrl,
+        }),
+      )
       dispatch(
         setOrgInfo({
           id: selected.id,

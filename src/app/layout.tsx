@@ -3,6 +3,7 @@ import './theme.css'
 import type { Metadata, Viewport } from 'next'
 
 import { FaviconUpdater } from '@/components/FaviconUpdater'
+import { HardNavigationBoundary } from '@/components/HardNavigationBoundary'
 import { Session as NextAuthSession } from 'next-auth'
 import NextTopLoader from 'nextjs-toploader'
 import { NuqsAdapter } from 'nuqs/adapters/next/app'
@@ -97,7 +98,9 @@ export default async function RootLayout({
               <SessionManager>
                 <Toaster />
                 <FaviconUpdater />
-                <PageLayout>{children}</PageLayout>
+                <HardNavigationBoundary>
+                  <PageLayout>{children}</PageLayout>
+                </HardNavigationBoundary>
               </SessionManager>
             </Providers>
           </StoreProvider>

@@ -1,4 +1,5 @@
 'use client'
+/* eslint-disable sort-imports */
 
 import { Card, CardContent } from '@/components/ui/card'
 import {
@@ -10,16 +11,16 @@ import {
   Loader2,
   Shield,
 } from 'lucide-react'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useSearchParams } from 'next/navigation'
 
 import { Button } from '@/components/ui/button'
 import PageContainer from '@/components/layout/page-container'
 import Stepper from '@/components/StepperComponent'
+import { hardNavigate } from '@/utils/navigation'
 import { useState } from 'react'
 
 export default function DidDetails(): React.JSX.Element {
   const searchParams = useSearchParams()
-  const router = useRouter()
   const totalSteps = 4
   const protocol = searchParams.get('protocol')
   const credentialType = searchParams.get('credentialType')
@@ -39,12 +40,12 @@ export default function DidDetails(): React.JSX.Element {
 
   const handleSchema = (): void => {
     setActiveAction('schema')
-    router.push('/schemas/create')
+    hardNavigate('/schemas/create')
   }
 
   const handleDashboard = (): void => {
     setActiveAction('dashboard')
-    router.push('/dashboard')
+    hardNavigate('/dashboard')
   }
 
   return (

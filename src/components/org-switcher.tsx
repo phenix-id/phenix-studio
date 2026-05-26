@@ -14,7 +14,12 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from '@/components/ui/sidebar'
-import { setOrgRoles, setSelectedOrgId, setTenantData } from '@/lib/orgSlice'
+import {
+  setOrgId,
+  setOrgRoles,
+  setSelectedOrgId,
+  setTenantData,
+} from '@/lib/orgSlice'
 import { useAppDispatch, useAppSelector } from '@/lib/hooks'
 
 import { AxiosResponse } from 'axios'
@@ -22,7 +27,7 @@ import React from 'react'
 import { RootState } from '@/lib/store'
 import { apiStatusCodes } from '@/config/CommonConstant'
 import { getOrganizationRoles } from '@/app/api/organization'
-import { useRouter } from 'next/navigation'
+import { hardNavigate } from '@/utils/navigation'
 
 interface Tenant {
   id: string
@@ -39,13 +44,11 @@ const OrgSwitcherInner = ({
   defaultTenant?: Tenant
   onTenantSwitch?: (tenantId: string) => void
 }): React.ReactElement => {
-  const selectedTenant =
+  const selectedTenantFromState =
     useAppSelector((state: RootState) => state.organization.selectedTenant) ??
-    defaultTenant ??
-    tenants[0]
+    null
 
   const dispatch = useAppDispatch()
-  const router = useRouter()
   const selectedOrgId = useAppSelector((state) => state.organization.orgId)
 
   const currentTenant = React.useMemo(() => {
@@ -58,6 +61,11 @@ const OrgSwitcherInner = ({
 
     return defaultTenant ?? (tenants.length > 0 ? tenants[0] : undefined)
   }, [selectedOrgId, tenants, defaultTenant])
+  const selectedTenant =
+    selectedTenantFromState &&
+    tenants.some((tenant) => tenant.id === selectedTenantFromState.id)
+      ? selectedTenantFromState
+      : currentTenant
 
   const getRoles = async (orgId: string): Promise<void> => {
     try {
@@ -74,6 +82,7 @@ const OrgSwitcherInner = ({
   }
 
   const handleTenantSwitch = (tenant: Tenant): void => {
+    dispatch(setOrgId(tenant.id))
     dispatch(setSelectedOrgId(tenant.id))
     dispatch(setTenantData(tenant))
     getRoles(tenant.id)
@@ -184,7 +193,7 @@ const OrgSwitcherInner = ({
                 <DropdownMenuSeparator />
 
                 <DropdownMenuItem
-                  onSelect={() => router.push('/create-organization')}
+                  onSelect={() => hardNavigate('/create-organization')}
                   className="flex cursor-pointer items-center gap-2"
                 >
                   <Plus size={16} />
@@ -197,7 +206,7 @@ const OrgSwitcherInner = ({
                   No organization found
                 </DropdownMenuItem>
                 <DropdownMenuItem
-                  onSelect={() => router.push('/create-organization')}
+                  onSelect={() => hardNavigate('/create-organization')}
                   className="flex cursor-pointer items-center gap-2"
                 >
                   <Plus size={16} />

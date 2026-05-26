@@ -1,4 +1,4 @@
-/* eslint-disable max-lines */
+/* eslint-disable max-lines, sort-imports */
 'use client'
 
 import * as yup from 'yup'
@@ -17,9 +17,14 @@ import {
   updateOrganization,
 } from '@/app/api/organization'
 import { fetchCities, fetchCountries, fetchStates } from '../helper/geoHelpers'
-import { setOrgId, setTenantData } from '@/lib/orgSlice'
+import {
+  setOrgId,
+  setOrgInfo,
+  setSelectedOrgId,
+  setTenantData,
+} from '@/lib/orgSlice'
 import { useEffect, useState } from 'react'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useSearchParams } from 'next/navigation'
 
 import { AlertComponent } from '@/components/AlertComponent'
 import { AxiosResponse } from 'axios'
@@ -33,6 +38,7 @@ import LogoUploader from './LogoUploader'
 import PageContainer from '@/components/layout/page-container'
 import Stepper from '@/components/StepperComponent'
 import { apiStatusCodes } from '@/config/CommonConstant'
+import { hardNavigate } from '@/utils/navigation'
 import { useAppDispatch } from '@/lib/hooks'
 
 type Countries = {
@@ -79,7 +85,6 @@ export default function OrganizationOnboarding(): React.JSX.Element {
   const [isBackLoading, setIsBackLoading] = useState(false)
 
   const searchParams = useSearchParams()
-  const router = useRouter()
   const orgId = searchParams.get('orgId')
   const redirectTo = searchParams.get('redirectTo')
   const clientAlias = searchParams.get('clientAlias')
@@ -180,7 +185,7 @@ export default function OrganizationOnboarding(): React.JSX.Element {
       setSuccess(null)
       setFailure(null)
 
-      const orgData = {
+      const organizationPayload = {
         name: values.name,
         description: values.description,
         logo: logoPreview || values?.logoUrl || '',
@@ -192,7 +197,10 @@ export default function OrganizationOnboarding(): React.JSX.Element {
         isPublic,
       }
 
-      const resCreateOrg = await updateOrganization(orgData, orgId as string)
+      const resCreateOrg = await updateOrganization(
+        organizationPayload,
+        orgId as string,
+      )
 
       const { data } = resCreateOrg as AxiosResponse
 
@@ -200,18 +208,42 @@ export default function OrganizationOnboarding(): React.JSX.Element {
         setSuccess(data?.message as string)
 
         if (orgId) {
+          const updatedLogoUrl =
+            logoPreview || values.logoPreview || values.logoUrl || ''
+          const existingOrg = orgData as unknown as {
+            roles?: string[]
+            userOrgRoles?: { orgRole?: { name?: string } }[]
+          }
+          const roles =
+            existingOrg?.userOrgRoles
+              ?.map((role) => role.orgRole?.name)
+              .filter((role): role is string => Boolean(role)) ??
+            existingOrg?.roles ??
+            []
+
+          dispatch(setOrgId(orgId))
+          dispatch(setSelectedOrgId(orgId))
           dispatch(
             setTenantData({
               id: orgId,
               name: values.name,
-              logoUrl: values.logoPreview ?? orgData?.logo,
+              logoUrl: updatedLogoUrl,
+            }),
+          )
+          dispatch(
+            setOrgInfo({
+              id: orgId,
+              name: values.name,
+              description: values.description,
+              logoUrl: updatedLogoUrl,
+              roles,
             }),
           )
         }
         setTimeout(() => {
           setSuccess(null)
           setLoading(true)
-          router.push('/dashboard')
+          hardNavigate('/dashboard', true)
         }, 3000)
       } else {
         setFailure(resCreateOrg as string)
@@ -246,25 +278,44 @@ export default function OrganizationOnboarding(): React.JSX.Element {
       const { data } = resCreateOrg as AxiosResponse
 
       if (data?.statusCode === apiStatusCodes.API_STATUS_CREATED) {
-        const orgId = data?.data?.id || data?.data?._id
+        const createdOrg = data?.data ?? {}
+        const orgId = createdOrg?.id || createdOrg?._id
+        const orgName = createdOrg?.name || values.name
+        const orgLogoUrl = createdOrg?.logoUrl || logoPreview || ''
+        const orgRoles =
+          createdOrg?.userOrgRoles
+            ?.map((role: { orgRole?: { name?: string } }) => role.orgRole?.name)
+            .filter((role: string | undefined): role is string =>
+              Boolean(role),
+            ) ?? []
 
         dispatch(setOrgId(orgId))
+        dispatch(setSelectedOrgId(orgId))
         dispatch(
           setTenantData({
             id: orgId,
-            name: data.name,
-            logoUrl: data.logoUrl,
+            name: orgName,
+            logoUrl: orgLogoUrl,
           }),
         )
-        setSuccess(data.message as string)
+        dispatch(
+          setOrgInfo({
+            id: orgId,
+            name: orgName,
+            description: createdOrg?.description || values.description,
+            logoUrl: orgLogoUrl,
+            roles: orgRoles.length > 0 ? orgRoles : ['owner'],
+          }),
+        )
+        setSuccess((data?.message as string) || 'Organization created')
 
         setTimeout(() => {
           const redirectUrl =
             redirectTo && clientAlias
               ? `/wallet-setup?orgId=${orgId}&redirectTo=${encodeURIComponent(redirectTo)}&clientAlias=${clientAlias}`
               : `/wallet-setup?orgId=${orgId}`
-          router.push(redirectUrl)
-        }, 3000)
+          hardNavigate(redirectUrl, true)
+        }, 600)
       } else {
         setFailure(resCreateOrg as string)
       }
@@ -593,7 +644,7 @@ export default function OrganizationOnboarding(): React.JSX.Element {
                       type="button"
                       onClick={() => {
                         setIsBackLoading(true)
-                        router.push('/dashboard')
+                        hardNavigate('/dashboard')
                       }}
                       disabled={isBackLoading}
                     >
