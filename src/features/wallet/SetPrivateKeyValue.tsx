@@ -120,26 +120,27 @@ const SetPrivateKeyValueInput = ({
 
           {generatedKeys && (
             <>
-              <div className="relative mt-3 flex items-center">
+              <p className="text-muted-foreground mt-4 mb-1 text-xs font-medium tracking-wide uppercase">
+                Private Key
+              </p>
+              <div className="relative flex items-center">
                 <CopyDid value={generatedKeys.privateKey.slice(2)} />
               </div>
 
+              <p className="text-muted-foreground mt-4 mb-1 text-xs font-medium tracking-wide uppercase">
+                Address
+              </p>
+              <div className="relative flex items-center">
+                <CopyDid value={generatedKeys.address} />
+              </div>
+
               {errorMessage && (
-                <span className="text-destructive static bottom-0 text-xs">
+                <span className="text-destructive mt-2 block text-xs">
                   {errorMessage}
                 </span>
               )}
 
-              <TokenWarningMessage />
-
-              <div className="relative my-3">
-                <span className="truncate text-sm">
-                  <span className="font-semibold">Address:</span>
-                  <div className="flex">
-                    <CopyDid value={generatedKeys.address} />
-                  </div>
-                </span>
-              </div>
+              <TokenWarningMessage mode="generated" />
             </>
           )}
         </>
@@ -159,12 +160,12 @@ const SetPrivateKeyValueInput = ({
           </div>
 
           {errorMessage && (
-            <span className="text-destructive static bottom-0 text-xs">
+            <span className="text-destructive mt-2 block text-xs">
               {errorMessage}
             </span>
           )}
 
-          <TokenWarningMessage />
+          <TokenWarningMessage mode="existing" />
         </>
       )}
     </div>

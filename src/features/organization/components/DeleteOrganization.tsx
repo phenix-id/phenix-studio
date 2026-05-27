@@ -153,6 +153,7 @@ export default function DeleteOrganizationPage(): React.JSX.Element {
       setShowPopup(false)
     } catch (error) {
       console.error('An error occurred:', error)
+      setShowPopup(false)
       setError(getErrorMessage(error, 'Delete failed'))
     } finally {
       setDeleteLoading(false)
@@ -294,48 +295,70 @@ export default function DeleteOrganizationPage(): React.JSX.Element {
     )
   }
 
+  const verCount = organizationData?.verificationRecordsCount ?? 0
+  const issCount = organizationData?.issuanceRecordsCount ?? 0
+  const connCount = organizationData?.connectionRecordsCount ?? 0
+
   const deleteCardData = [
     {
+      step: 1,
       title: 'Verifications',
-      description: 'Verifications is the list of verification records',
-      count: organizationData?.verificationRecordsCount ?? 0,
+      description: 'Delete all verification records for this organization.',
+      count: verCount,
       deleteFunc: deleteFunctions.deleteVerifications,
       confirmMessage: 'Are you sure you want to delete verification records?',
       isDisabled: false,
+      blockingReason: null,
     },
     {
+      step: 2,
       title: 'Issuance',
-      description: 'Issuance is the list of credential records',
-      count: organizationData?.issuanceRecordsCount ?? 0,
+      description:
+        'Delete all issued credential records for this organization.',
+      count: issCount,
       deleteFunc: deleteFunctions.deleteIssuance,
       confirmMessage: 'Are you sure you want to delete credential records?',
-      isDisabled: (organizationData?.verificationRecordsCount ?? 0) > 0,
+      isDisabled: verCount > 0,
+      blockingReason:
+        verCount > 0 ? 'Delete verifications first (Step 1)' : null,
     },
     {
+      step: 3,
       title: 'Connections',
-      description: 'Connections is the list of connection records',
-      count: organizationData?.connectionRecordsCount ?? 0,
+      description: 'Delete all connection records for this organization.',
+      count: connCount,
       deleteFunc: deleteFunctions.deleteConnection,
       confirmMessage: 'Are you sure you want to delete connection records?',
-      isDisabled:
-        (organizationData?.issuanceRecordsCount ?? 0) > 0 ||
-        (organizationData?.verificationRecordsCount ?? 0) > 0,
+      isDisabled: issCount > 0 || verCount > 0,
+      blockingReason:
+        issCount > 0
+          ? 'Delete issuance records first (Step 2)'
+          : verCount > 0
+            ? 'Delete verifications first (Step 1)'
+            : null,
     },
     {
+      step: 4,
       title: 'Organization wallet',
-      description: 'Organization Wallet is the data of your created DIDs.',
+      description: 'Delete the organization wallet and all associated DIDs.',
       count: isWalletPresent ? 1 : 0,
       deleteFunc: deleteFunctions.deleteOrgWallet,
       confirmMessage: 'Are you sure you want to delete organization wallet?',
-      isDisabled:
-        (organizationData?.connectionRecordsCount ?? 0) > 0 ||
-        (organizationData?.issuanceRecordsCount ?? 0) > 0 ||
-        (organizationData?.verificationRecordsCount ?? 0) > 0,
+      isDisabled: connCount > 0 || issCount > 0 || verCount > 0,
+      blockingReason:
+        connCount > 0
+          ? 'Delete connections first (Step 3)'
+          : issCount > 0
+            ? 'Delete issuance records first (Step 2)'
+            : verCount > 0
+              ? 'Delete verifications first (Step 1)'
+              : null,
     },
     {
+      step: 5,
       title: 'Organization',
       description:
-        'Organization is the collection of your users, schemas, cred-defs, connections and wallet.',
+        'Permanently delete the organization including all users, schemas, and credential definitions.',
       deleteFunc: deleteFunctions.deleteOrganizations,
       confirmMessage: (
         <>
@@ -344,6 +367,9 @@ export default function DeleteOrganizationPage(): React.JSX.Element {
         </>
       ),
       isDisabled: isWalletPresent,
+      blockingReason: isWalletPresent
+        ? 'Delete organization wallet first (Step 4)'
+        : null,
     },
   ]
 
@@ -360,15 +386,32 @@ export default function DeleteOrganizationPage(): React.JSX.Element {
           </Alert>
         )}
 
-        {organizationData && (
+        {!loading && (
           <div className="space-y-4">
+            <div className="text-muted-foreground mb-4 flex flex-wrap items-center gap-4 text-xs">
+              <span className="flex items-center gap-1.5">
+                <span className="bg-destructive inline-block h-3.5 w-1 rounded-full" />
+                Action required — delete this now
+              </span>
+              <span className="flex items-center gap-1.5">
+                <span className="inline-block h-3.5 w-1 rounded-full bg-amber-400" />
+                Locked — complete the previous step first
+              </span>
+              <span className="flex items-center gap-1.5">
+                <span className="inline-block h-3.5 w-1 rounded-full bg-green-500" />
+                Cleared — nothing left to delete
+              </span>
+            </div>
+
             {deleteCardData.map((card) => (
               <DeleteOrganizationCard
                 key={card.title}
+                step={card.step}
                 title={card.title}
                 description={card.description}
                 count={card.count}
                 isDisabled={card.isDisabled || deleteLoading || loading}
+                blockingReason={card.blockingReason}
                 onDeleteClick={() => {
                   setShowPopup(true)
                   setDeleteAction(() => card.deleteFunc)
