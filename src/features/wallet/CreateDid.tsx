@@ -269,35 +269,58 @@ const CreateDid = (): React.JSX.Element => {
                 )}
               </div>
               <div className="mb-8 grid gap-4 md:grid-cols-2">
-                {protocolOptions.map((option) => (
-                  <button
-                    key={option.id}
-                    type="button"
-                    onClick={() => {
-                      setSelectedProtocol(option.id as Protocol)
-                      setSelectedOption(null)
-                      setSelectedDid(null)
-                      setDomainError(null)
-                    }}
-                    className={`relative rounded-xl border-2 p-6 text-left transition-all ${selectedProtocol === option.id ? 'border-primary bg-secondary shadow-sm' : 'border-border bg-background hover:shadow-sm'}`}
-                  >
-                    {option.id === 'didcomm' && (
-                      <TooltipInfo text={InfoText.DIDCommInfoText} />
-                    )}
-                    {option.id === 'oid4vp' && (
-                      <TooltipInfo text={InfoText.OpenID4VPInfoText} />
-                    )}
+                {protocolOptions.map((option) => {
+                  if (option.disabled) {
+                    return (
+                      <div
+                        key={option.id}
+                        className="border-border bg-background relative cursor-not-allowed rounded-xl border-2 p-6 text-left opacity-60"
+                      >
+                        <span className="bg-muted text-muted-foreground absolute top-3 right-3 rounded-full px-2 py-0.5 text-xs font-medium">
+                          Coming Soon
+                        </span>
 
-                    <div className="mb-6">{option.icon}</div>
+                        <div className="mb-6">{option.icon}</div>
 
-                    <h3 className="text-foreground mb-1 font-semibold">
-                      {option.title}
-                    </h3>
-                    <p className="text-muted-foreground text-sm">
-                      {option.desc}
-                    </p>
-                  </button>
-                ))}
+                        <h3 className="text-foreground mb-1 font-semibold">
+                          {option.title}
+                        </h3>
+                        <p className="text-muted-foreground text-sm">
+                          {option.desc}
+                        </p>
+                      </div>
+                    )
+                  }
+                  return (
+                    <button
+                      key={option.id}
+                      type="button"
+                      onClick={() => {
+                        setSelectedProtocol(option.id as Protocol)
+                        setSelectedOption(null)
+                        setSelectedDid(null)
+                        setDomainError(null)
+                      }}
+                      className={`relative rounded-xl border-2 p-6 text-left transition-all ${selectedProtocol === option.id ? 'border-primary bg-secondary shadow-sm' : 'border-border bg-background hover:shadow-sm'}`}
+                    >
+                      {option.id === 'didcomm' && (
+                        <TooltipInfo text={InfoText.DIDCommInfoText} />
+                      )}
+                      {option.id === 'oid4vp' && (
+                        <TooltipInfo text={InfoText.OpenID4VPInfoText} />
+                      )}
+
+                      <div className="mb-6">{option.icon}</div>
+
+                      <h3 className="text-foreground mb-1 font-semibold">
+                        {option.title}
+                      </h3>
+                      <p className="text-muted-foreground text-sm">
+                        {option.desc}
+                      </p>
+                    </button>
+                  )
+                })}
               </div>
 
               {selectedProtocol && (
@@ -307,31 +330,52 @@ const CreateDid = (): React.JSX.Element => {
                   </p>
 
                   <div className="grid gap-4 md:grid-cols-2">
-                    {subOptions.map((option) => (
-                      <button
-                        key={option.id}
-                        type="button"
-                        onClick={() => {
-                          setSelectedOption(option.id)
-                          setSelectedDid(null)
-                          setDomainError(null)
-                        }}
-                        className={`relative rounded-xl border-2 p-6 text-left transition-all ${
-                          selectedOption === option.id
-                            ? 'border-primary bg-secondary shadow-sm'
-                            : 'border-border bg-background hover:border-foreground/30 hover:shadow-sm'
-                        }`}
-                      >
-                        <TooltipInfo text={option.tooltip} />
+                    {subOptions.map((option) => {
+                      if (option.disabled) {
+                        return (
+                          <div
+                            key={option.id}
+                            className="border-border bg-background relative cursor-not-allowed rounded-xl border-2 p-6 text-left opacity-60"
+                          >
+                            <span className="bg-muted text-muted-foreground absolute top-3 right-3 rounded-full px-2 py-0.5 text-xs font-medium">
+                              Coming Soon
+                            </span>
 
-                        <h3 className="text-foreground mb-1 font-semibold">
-                          {option.title}
-                        </h3>
-                        <p className="text-muted-foreground text-sm">
-                          {option.desc}
-                        </p>
-                      </button>
-                    ))}
+                            <h3 className="text-foreground mb-1 font-semibold">
+                              {option.title}
+                            </h3>
+                            <p className="text-muted-foreground text-sm">
+                              {option.desc}
+                            </p>
+                          </div>
+                        )
+                      }
+                      return (
+                        <button
+                          key={option.id}
+                          type="button"
+                          onClick={() => {
+                            setSelectedOption(option.id)
+                            setSelectedDid(null)
+                            setDomainError(null)
+                          }}
+                          className={`relative rounded-xl border-2 p-6 text-left transition-all ${
+                            selectedOption === option.id
+                              ? 'border-primary bg-secondary shadow-sm'
+                              : 'border-border bg-background hover:border-foreground/30 hover:shadow-sm'
+                          }`}
+                        >
+                          <TooltipInfo text={option.tooltip} />
+
+                          <h3 className="text-foreground mb-1 font-semibold">
+                            {option.title}
+                          </h3>
+                          <p className="text-muted-foreground text-sm">
+                            {option.desc}
+                          </p>
+                        </button>
+                      )
+                    })}
                   </div>
                 </div>
               )}

@@ -21,6 +21,7 @@ export const protocolOptions = [
     id: 'didcomm',
     title: 'DIDComm',
     desc: 'Use decentralized identifiers for peer-to-peer verifiable communication.',
+    disabled: false,
     icon: (
       <img
         src="/images/didcomm-logo.png"
@@ -33,6 +34,7 @@ export const protocolOptions = [
     id: 'oid4vp',
     title: 'OpenID4VP',
     desc: 'Use OpenID for Verifiable Presentations.',
+    disabled: true,
     icon: (
       <img
         src="/images/oid4vc_logo.png"
@@ -51,12 +53,14 @@ export const subOptionsMap = {
       desc: 'Privacy-preserving credentials issued over DIDComm.',
       tooltip:
         'AnonCreds enables privacy-preserving credentials using ZK proofs.',
+      disabled: false,
     },
     {
       id: 'w3c',
       title: 'W3C VCDM',
       desc: 'W3C Verifiable Credentials compatible with DIDComm transport.',
       tooltip: 'W3C VCDM defines interoperable verifiable credentials.',
+      disabled: false,
     },
   ],
 
@@ -66,6 +70,7 @@ export const subOptionsMap = {
       title: 'ISO mdoc',
       desc: 'ISO/IEC 18013-5 mobile document format for OpenID4VP.',
       tooltip: 'ISO mdoc follows the ISO/IEC 18013-5 mobile identity standard.',
+      disabled: true,
     },
     {
       id: 'sdjwt',
@@ -73,6 +78,7 @@ export const subOptionsMap = {
       desc: 'Selective Disclosure JWT Verifiable Credential format for OpenID4VP.',
       tooltip:
         'SD-JWT VC supports selective disclosure using a JWT-based credential format.',
+      disabled: true,
     },
   ],
 }
