@@ -58,6 +58,7 @@ export default function LogoUploader({
           <Input
             type="file"
             accept="image/*"
+            className="cursor-pointer"
             onChange={(e) => handleImageChange(e)}
           />
           {imgError && (

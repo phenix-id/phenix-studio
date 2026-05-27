@@ -1,18 +1,21 @@
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { AlertTriangle } from 'lucide-react'
 import React from 'react'
-import { cn } from '@/lib/utils'
 
-const TokenWarningMessage = (): React.JSX.Element => (
-  <span
-    className={cn(
-      'bg-warning mt-2 mr-2 inline-flex items-center rounded-sm px-2 py-2 text-xs font-medium',
-      '',
-    )}
-  >
-    <AlertTriangle className="my-2 mr-1.5 mr-2" size={20} />
-    Before creating the wallet, ensure that you have added tokens to the above
-    address.
-  </span>
+interface Props {
+  mode: 'generated' | 'existing'
+}
+
+const TokenWarningMessage = ({ mode }: Props): React.JSX.Element => (
+  <Alert variant="warning" className="mt-4">
+    <AlertTriangle className="h-4 w-4" />
+    <AlertTitle>Funding required</AlertTitle>
+    <AlertDescription>
+      {mode === 'generated'
+        ? 'This wallet address needs MATIC tokens on the Polygon testnet before the DID can be created. Copy the address above and fund it before proceeding.'
+        : 'Ensure the wallet for this private key has MATIC tokens on the Polygon testnet before creating the DID.'}
+    </AlertDescription>
+  </Alert>
 )
 
 export default TokenWarningMessage
