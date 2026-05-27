@@ -1,9 +1,11 @@
 'use client'
 
+import { appFaviconPath, appLogoAltText } from '@/config/CommonConstant'
 import { setRefreshToken, setSessionId, setToken } from '@/lib/authSlice'
 import { useAppDispatch, useAppSelector } from '@/lib/hooks'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
+import Loader from '@/components/Loader'
 import { generateAccessToken } from '@/utils/session'
 import { useSession } from 'next-auth/react'
 
@@ -56,6 +58,7 @@ export const SessionManager = ({
   const dispatch = useAppDispatch()
   const auth = useAppSelector((state) => state.auth)
   const [sessionReady, setSessionReady] = useState(false)
+  const hasValidatedRef = useRef(false)
 
   const redirectTo = searchParams.get('redirectTo')
   const isIgnoreSessionCheck = excludeRouteForSessionCheck.some((page) =>
@@ -103,10 +106,19 @@ export const SessionManager = ({
     if (status === 'loading') {
       return
     }
-    setSessionReady(false)
+
+    // Only show the loader before the very first successful validation.
+    // After that, keep sessionReady=true across page navigations.
+    if (!hasValidatedRef.current) {
+      setSessionReady(false)
+    }
+
+    const delay = hasValidatedRef.current ? 0 : 500
+
     const timeout = setTimeout(() => {
       if (status === 'authenticated' && session?.sessionId) {
         const hasSessionTokens = setSessionTokens()
+        hasValidatedRef.current = true
         if (!hasSessionTokens) {
           void logoutSession()
           return
@@ -120,32 +132,38 @@ export const SessionManager = ({
         }
         setSessionReady(true)
       } else if (status === 'unauthenticated' || session === null) {
+        hasValidatedRef.current = false
         if (!isIgnoreSessionCheck) {
           router.push('/sign-in')
         }
       } else {
+        hasValidatedRef.current = true
         setSessionReady(true)
       }
-    }, 500)
+    }, delay)
 
     return () => clearTimeout(timeout)
-  }, [
-    isIgnoreSessionCheck,
-    logoutSession,
-    pathname,
-    redirectTo,
-    router,
-    session,
-    session?.sessionId,
-    setSessionTokens,
-    status,
-  ])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [status, session?.sessionId, isIgnoreSessionCheck])
 
   if (
     status === 'loading' ||
     (status === 'authenticated' && !sessionReady && !isIgnoreSessionCheck)
   ) {
-    return <div>Loading session...</div>
+    return (
+      <div className="bg-background fixed top-0 left-0 z-[9999] flex h-full w-full items-center justify-center">
+        <div className="relative">
+          <Loader size={90} />
+          <div className="absolute inset-0 flex items-center justify-center">
+            <img
+              src={appFaviconPath}
+              alt={appLogoAltText}
+              className="h-14 w-14 object-contain"
+            />
+          </div>
+        </div>
+      </div>
+    )
   }
 
   return <>{children}</>
