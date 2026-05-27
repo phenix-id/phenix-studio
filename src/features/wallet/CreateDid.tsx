@@ -154,7 +154,7 @@ const CreateDid = (): React.JSX.Element => {
       }
 
       const payload = {
-        seed: method === DidMethod.POLYGON ? '' : seeds,
+        seed: fullMethod === DidMethod.POLYGON ? '' : seeds,
         keyType: 'ed25519',
         method,
         ledger: didParts[2] || '',

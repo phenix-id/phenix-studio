@@ -1,5 +1,10 @@
 const MODE = process.env.MODE || ''
 
+const polygonDidOptions = [
+  'did:polygon:testnet',
+  ...(MODE === 'PROD' ? ['did:polygon:mainnet'] : []),
+]
+
 export const didExamples: Record<string, string> = {
   'did:indy:bcovrin:testnet': 'did:indy:bcovrin:testnet:123abc456xyz',
   'did:indy:indicio:demonet': 'did:indy:indicio:demonet:abc123xyz789',
@@ -80,12 +85,7 @@ export const didOptionsMap: Record<string, string[]> = {
     'did:indy:indicio:testnet',
   ],
 
-  w3c: [
-    'did:polygon:testnet',
-    ...(MODE === 'PROD' ? ['did:polygon:mainnet'] : []),
-    'did:key',
-    'did:web',
-  ],
-  mdoc: ['did:key', 'did:web'],
-  sdjwt: ['did:key', 'did:web'],
+  w3c: [...polygonDidOptions, 'did:key', 'did:web'],
+  mdoc: [...polygonDidOptions, 'did:key', 'did:web'],
+  sdjwt: [...polygonDidOptions, 'did:key', 'did:web'],
 }
