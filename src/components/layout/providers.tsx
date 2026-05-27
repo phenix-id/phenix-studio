@@ -24,7 +24,12 @@ export default function Providers({
       enableColorScheme
     >
       <ActiveThemeProvider initialTheme={activeThemeValue}>
-        <SessionProvider session={session} key={session?.user.id}>
+        <SessionProvider
+          session={session}
+          refetchOnWindowFocus={false}
+          refetchInterval={0}
+          key={session?.user.id}
+        >
           {children}
         </SessionProvider>
       </ActiveThemeProvider>
