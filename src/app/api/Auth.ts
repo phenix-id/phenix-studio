@@ -2,6 +2,8 @@ import {
   axiosDelete,
   axiosGet,
   axiosPost,
+  axiosPublicUserGet,
+  axiosPublicUserPost,
   axiosPut,
 } from '@/services/apiRequests'
 
@@ -48,7 +50,7 @@ export const sendVerificationMail = async (
     config,
   }
   try {
-    const response = await axiosPost(details)
+    const response = await axiosPublicUserPost(details)
     return response
   } catch (error) {
     const err = error as Error
@@ -65,7 +67,7 @@ export const resetPassword = async (
     payload,
   }
   try {
-    const response = await axiosPost(details)
+    const response = await axiosPublicUserPost(details)
     return response
   } catch (error) {
     const err = error as Error
@@ -82,7 +84,7 @@ export const forgotPassword = async (payload: {
     payload,
   }
   try {
-    const response = await axiosPost(details)
+    const response = await axiosPublicUserPost(details)
     return response
   } catch (error) {
     const err = error as Error
@@ -101,7 +103,7 @@ export const loginUser = async (
     config,
   }
   try {
-    const response = await axiosPost(details)
+    const response = await axiosPublicUserPost(details)
     return response
   } catch (error) {
     const err = error as Error
@@ -177,7 +179,7 @@ export const verifyUserMail = async (
     config,
   }
   try {
-    const response = await axiosGet(details)
+    const response = await axiosPublicUserGet(details)
     return response
   } catch (error) {
     const err = error as Error
@@ -195,7 +197,7 @@ export const checkUserExist = async (
     config,
   }
   try {
-    const response = await axiosGet(details)
+    const response = await axiosPublicUserGet(details)
     return response
   } catch (error) {
     const err = error as Error
@@ -214,7 +216,7 @@ export const addPasswordDetails = async (
     config,
   }
   try {
-    const response = await axiosPost(details)
+    const response = await axiosPublicUserPost(details)
     return response
   } catch (error) {
     const err = error as Error
