@@ -1,10 +1,11 @@
-import type { AxiosError, AxiosResponse } from 'axios'
+import axios, { type AxiosError, type AxiosResponse } from 'axios'
 import {
   instance as axiosUser,
   EcosystemInstance as ecosystemAxiosUser,
 } from './axiosIntercepter'
 
 import { HeaderConfig } from '@/config/GetHeaderConfigs'
+import { store } from '@/lib/store'
 
 export interface APIParameters {
   url: string
@@ -25,6 +26,30 @@ const HandleResponse = (
     new Error('Please check your internet connectivity and try again'),
   )
 }
+
+const publicAxiosUser = axios.create({
+  baseURL: process.env.NEXT_PUBLIC_BASE_URL,
+})
+const publicEcosystemAxiosUser = axios.create({
+  baseURL: process.env.PUBLIC_ECOSYSTEM_BASE_URL,
+})
+
+publicAxiosUser.interceptors.request.use((config) => {
+  const token = store.getState().auth?.token
+
+  if (!token) {
+    return config
+  }
+
+  return {
+    ...config,
+    headers: new axios.AxiosHeaders({
+      ...config.headers,
+      Authorization: `Bearer ${token}`,
+    }),
+  }
+})
+
 export const axiosGet = async ({
   url,
   config,
@@ -40,9 +65,40 @@ export const axiosGet = async ({
 }
 export const axiosPublicUserGet = async ({
   url,
+  config,
 }: APIParameters): Promise<AxiosResponse> => {
   try {
-    const response = await axiosUser.get(url)
+    const response = await publicAxiosUser.get(url, config)
+
+    return response
+  } catch (error) {
+    const err = error as AxiosError
+    return HandleResponse(err.response)
+  }
+}
+
+export const axiosPublicUserPost = async ({
+  url,
+  payload,
+  config,
+}: APIParameters): Promise<AxiosResponse> => {
+  try {
+    const response = await publicAxiosUser.post(url, payload, config)
+
+    return response
+  } catch (error) {
+    const err = error as AxiosError
+    return HandleResponse(err.response)
+  }
+}
+
+export const axiosPublicUserPut = async ({
+  url,
+  payload,
+  config,
+}: APIParameters): Promise<AxiosResponse> => {
+  try {
+    const response = await publicAxiosUser.put(url, payload, config)
 
     return response
   } catch (error) {
@@ -53,9 +109,10 @@ export const axiosPublicUserGet = async ({
 
 export const axiosPublicOrganisationGet = async ({
   url,
+  config,
 }: APIParameters): Promise<AxiosResponse> => {
   try {
-    const response = await axiosUser.get(url)
+    const response = await publicAxiosUser.get(url, config)
 
     return response
   } catch (error) {
@@ -140,9 +197,10 @@ export const ecosystemAxiosGet = async ({
 }
 export const ecosystemAxiosPublicUserGet = async ({
   url,
+  config,
 }: APIParameters): Promise<AxiosResponse> => {
   try {
-    const response = await ecosystemAxiosUser.get(url)
+    const response = await publicEcosystemAxiosUser.get(url, config)
 
     return response
   } catch (error) {
@@ -153,9 +211,10 @@ export const ecosystemAxiosPublicUserGet = async ({
 
 export const ecosystemAxiosPublicOrganisationGet = async ({
   url,
+  config,
 }: APIParameters): Promise<AxiosResponse> => {
   try {
-    const response = await ecosystemAxiosUser.get(url)
+    const response = await publicEcosystemAxiosUser.get(url, config)
 
     return response
   } catch (error) {

@@ -8,8 +8,9 @@ import {
 } from '@/components/profile/interfaces'
 import {
   axiosDelete,
-  axiosGet,
-  axiosPost,
+  axiosPublicUserGet,
+  axiosPublicUserPost,
+  axiosPublicUserPut,
   axiosPut,
 } from '@/services/apiRequests'
 
@@ -29,7 +30,7 @@ export const generateRegistrationOption = async (
   }
 
   try {
-    const response = await axiosPost(details)
+    const response = await axiosPublicUserPost(details)
     return response
   } catch (error) {
     const err = error as Error
@@ -48,7 +49,7 @@ export const verifyRegistration = async (
   }
 
   try {
-    const response = await axiosPost(details)
+    const response = await axiosPublicUserPost(details)
     return response
   } catch (error) {
     const err = error as Error
@@ -67,7 +68,7 @@ export const addDeviceDetails = async (
   }
 
   try {
-    const response = await axiosPut(details)
+    const response = await axiosPublicUserPut(details)
     return response
   } catch (error) {
     const err = error as Error
@@ -84,7 +85,7 @@ export const getUserDeviceDetails = async (
   }
 
   try {
-    const response = await axiosGet(details)
+    const response = await axiosPublicUserGet(details)
     return response
   } catch (error) {
     const err = error as Error
@@ -119,7 +120,7 @@ export const generateAuthenticationOption = async (
   }
 
   try {
-    const response = await axiosPost(details)
+    const response = await axiosPublicUserPost(details)
     return response
   } catch (error) {
     const err = error as Error
@@ -138,7 +139,7 @@ export const verifyAuthentication = async (
   }
 
   try {
-    const response = await axiosPost(details)
+    const response = await axiosPublicUserPost(details)
     return response
   } catch (error) {
     const err = error as Error
@@ -174,7 +175,7 @@ export const addPasskeyUserDetails = async (
     config,
   }
   try {
-    const response = await axiosPut(details)
+    const response = await axiosPublicUserPut(details)
     return response
   } catch (error) {
     const err = error as Error
