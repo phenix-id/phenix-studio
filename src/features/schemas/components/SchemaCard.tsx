@@ -11,21 +11,20 @@ import React, { useState } from 'react'
 import {
   Tooltip,
   TooltipContent,
-  TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip'
-import { usePathname, useRouter } from 'next/navigation'
-
 import { Button } from '@/components/ui/button'
 import CustomCheckbox from '@/components/CustomCheckbox'
 import DateTooltip from '@/components/DateTooltip'
 import Loader from '@/components/Loader'
 import { ShieldCheck } from 'lucide-react'
 import { dateConversion } from '@/utils/DateConversion'
+import { hardNavigate } from '@/utils/navigation'
 import { limitedAttributesLength } from '@/config/CommonConstant'
 import { pathRoutes } from '@/config/pathRoutes'
 import { setSchemaDetails } from '@/lib/schemaStorageSlice'
 import { useAppDispatch } from '@/lib/hooks'
+import { usePathname } from 'next/navigation'
 
 const AttributesList: React.FC<{
   readonly attributes: IAttributes[]
@@ -60,7 +59,6 @@ const SchemaCard = (props: Readonly<ISchemaCardProps>): React.JSX.Element => {
   const [isSelected, setIsSelected] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
 
-  const router = useRouter()
   const pathname = usePathname()
   const isVerificationPage = pathname.includes('verification')
   const dispatch = useAppDispatch()
@@ -100,7 +98,7 @@ const SchemaCard = (props: Readonly<ISchemaCardProps>): React.JSX.Element => {
         },
       }),
     )
-    router.push(pathRoutes.organizations.Issuance.issue)
+    hardNavigate(pathRoutes.organizations.Issuance.issue)
   }
 
   const handleCheckboxChange = (
@@ -137,7 +135,7 @@ const SchemaCard = (props: Readonly<ISchemaCardProps>): React.JSX.Element => {
     }
 
     if (!props.w3cSchema && !hasNestedAttributes && props.schemaId) {
-      router.push(`/schemas/${props.schemaId}?alias=${props.schemaName}`)
+      hardNavigate(`/schemas/${props.schemaId}?alias=${props.schemaName}`)
     }
 
     if (props.onClickCallback) {
@@ -218,29 +216,27 @@ const SchemaCard = (props: Readonly<ISchemaCardProps>): React.JSX.Element => {
         </div>
 
         <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <div>
-                  <AttributesList
-                    attributes={props.attributes}
-                    limitedAttributes={props.limitedAttributes}
-                  />
-                </div>
-              </TooltipTrigger>
-              <TooltipContent
-                side="bottom"
-                sideOffset={4}
-                className="break-words whitespace-normal"
-              >
-                <pre className="block font-semibold break-words whitespace-normal">
-                  {props.attributes
-                    .map((val: { attributeName: string }) => val.attributeName)
-                    .join(', ')}
-                </pre>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div>
+                <AttributesList
+                  attributes={props.attributes}
+                  limitedAttributes={props.limitedAttributes}
+                />
+              </div>
+            </TooltipTrigger>
+            <TooltipContent
+              side="bottom"
+              sideOffset={4}
+              className="break-words whitespace-normal"
+            >
+              <pre className="block font-semibold break-words whitespace-normal">
+                {props.attributes
+                  .map((val: { attributeName: string }) => val.attributeName)
+                  .join(', ')}
+              </pre>
+            </TooltipContent>
+          </Tooltip>
 
           {props.w3cSchema &&
             !props.isVerification &&

@@ -21,6 +21,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip'
 
 import ActionButtons from './ActionButtons'
 import { AddAttributeSVG } from '@/config/svgs/CreateSchema'
@@ -51,13 +56,21 @@ function FormikData({
   setSuccess,
   loading,
 }: Readonly<IFormikDataProps>): JSX.Element {
+  const toTitleCase = (str: string): string =>
+    str.toLowerCase().replace(/\b\w/g, (char) => char.toUpperCase())
+
   const handleAttributeChange =
     (index: number, formikHandlers: FormikProps<IFormData>) =>
     (e: ChangeEvent<HTMLInputElement>) => {
-      formikHandlers.handleChange(e)
+      const raw = e.target.value
+      formikHandlers.setFieldValue(
+        `attribute.${index}.attributeName`,
+        raw.toLowerCase(),
+        true,
+      )
       formikHandlers.setFieldValue(
         `attribute[${index}].displayName`,
-        e.target.value,
+        toTitleCase(raw),
         true,
       )
     }
@@ -70,6 +83,7 @@ function FormikData({
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const handleAddAttribute = (push: (item: any) => void) => () => {
     push({
+      id: crypto.randomUUID(),
       attributeName: '',
       schemaDataType: 'string',
       displayName: '',
@@ -94,6 +108,21 @@ function FormikData({
     attribute: { isRequired: boolean }[],
   ): boolean {
     return !attribute.some((item) => item.isRequired === true)
+  }
+
+  const showRequiredHint = (values: IFormData): boolean => {
+    const { schemaName, schemaVersion, attribute } = values
+    const schemaReady =
+      type === SchemaType.INDY
+        ? Boolean(schemaName && schemaVersion)
+        : Boolean(schemaName)
+    if (!schemaReady) {
+      return false
+    }
+    const allFieldsFilled = attribute.every(
+      (a) => a.attributeName && a.schemaDataType && a.displayName,
+    )
+    return allFieldsFilled && !attribute.some((a) => a.isRequired)
   }
   return (
     <Formik
@@ -348,6 +377,10 @@ function FormikData({
                             element={element}
                             remove={remove}
                             areFirstInputsSelected={areFirstInputsSelected}
+                            highlightRequired={
+                              index === values.attribute.length - 1 &&
+                              showRequiredHint(formikHandlers.values)
+                            }
                           />
                           <div className="absolute bottom-[-36px] left-6">
                             <span>
@@ -369,24 +402,45 @@ function FormikData({
                                       ?.isRequired
                                   }
                                 </label>
+                              ) : index === values.attribute.length - 1 &&
+                                showRequiredHint(formikHandlers.values) ? (
+                                <label className="h-5 text-xs text-amber-500 dark:text-amber-400">
+                                  Mark at least one attribute as required
+                                </label>
                               ) : null}
                             </span>
                           </div>
                         </div>
                         <div>
                           {index === values.attribute.length - 1 && (
-                            <Button
-                              key={element.id}
-                              className={
-                                'absolute bottom-[-62px] left-[50%] m-auto flex w-max translate-x-[-50%] flex-row items-center gap-2 rounded-full py-0 disabled:opacity-100'
-                              }
-                              type="button"
-                              onClick={handleAddAttribute(push)}
-                              disabled={!filledInputs(formikHandlers.values)}
-                            >
-                              <AddAttributeSVG />
-                              <span className="my-0.5 ml-1">Add attribute</span>
-                            </Button>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <span className="absolute bottom-[-62px] left-[50%] inline-flex translate-x-[-50%]">
+                                  <Button
+                                    key={element.id}
+                                    className="flex w-max flex-row items-center gap-2 rounded-full py-0 disabled:pointer-events-none disabled:opacity-100"
+                                    type="button"
+                                    onClick={handleAddAttribute(push)}
+                                    disabled={
+                                      !filledInputs(formikHandlers.values)
+                                    }
+                                  >
+                                    <AddAttributeSVG />
+                                    <span className="my-0.5 ml-1">
+                                      Add attribute
+                                    </span>
+                                  </Button>
+                                </span>
+                              </TooltipTrigger>
+                              {showRequiredHint(formikHandlers.values) && (
+                                <TooltipContent side="top">
+                                  <p>
+                                    Mark at least one attribute as
+                                    &quot;Required&quot; to add more
+                                  </p>
+                                </TooltipContent>
+                              )}
+                            </Tooltip>
                           )}
                         </div>
                       </div>

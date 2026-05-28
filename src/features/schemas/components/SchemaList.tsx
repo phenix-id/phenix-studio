@@ -10,7 +10,7 @@ import {
   SchemaListItem,
   UserOrgRole,
 } from '../type/schemas-interface'
-import React, { ChangeEvent, useEffect, useState } from 'react'
+import React, { ChangeEvent, useCallback, useEffect, useState } from 'react'
 import { apiStatusCodes, itemPerPage } from '../../../config/CommonConstant'
 import { getAllSchemas, getAllSchemasByOrgId } from '@/app/api/schema'
 import { useAppDispatch, useAppSelector } from '@/lib/hooks'
@@ -30,7 +30,7 @@ import SidePanelComponent from '@/config/SidePanelCommon'
 import { Skeleton } from '@/components/ui/skeleton'
 import { getOrganizationById } from '@/app/api/organization'
 import { getUserProfile } from '@/app/api/Auth'
-import { useRouter } from 'next/navigation'
+import { hardNavigate } from '@/utils/navigation'
 
 const generatePaginationNumbers = (
   currentPage: number,
@@ -99,7 +99,6 @@ const SchemaList = (props: {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false)
   const [sideBarFields, setSideBarFields] = useState<ISidebarSliderData[]>([])
 
-  const route = useRouter()
   const dispatch = useAppDispatch()
 
   const [schemaListAPIParameter, setSchemaListAPIParameter] = useState({
@@ -114,7 +113,7 @@ const SchemaList = (props: {
   // const optionsWithDefault = ["Organization's schema", ...options]
   const skeletonIds = ['skeleton-1', 'skeleton-2', 'skeleton-3', 'skeleton-4']
 
-  const processDidSettings = (did: string): void => {
+  const processDidSettings = useCallback((did: string): void => {
     if (
       did.includes(DidMethod.POLYGON) ||
       did.includes(DidMethod.KEY) ||
@@ -132,7 +131,7 @@ const SchemaList = (props: {
     if (did.includes(DidMethod.KEY) || did.includes(DidMethod.WEB)) {
       setIsNoLedger(true)
     }
-  }
+  }, [])
   const extractUserRoles = (
     roles: UserOrgRole[],
     organizationId: string,
@@ -185,97 +184,95 @@ const SchemaList = (props: {
     fetchProfile()
   }, [token, organizationId, dispatch])
 
-  const getSchemaList = async (
-    schemaListAPIParameter: GetAllSchemaListParameter,
-    flag: boolean,
-  ): Promise<void> => {
-    try {
-      setLoading(true)
-      let schemaResponse = undefined
-      if (flag) {
-        schemaResponse = await getAllSchemas(
-          schemaListAPIParameter,
-          schemaType,
-          ledger,
-        )
-      } else {
-        schemaResponse = await getAllSchemasByOrgId(
-          schemaListAPIParameter,
-          organizationId,
-        )
-      }
+  const getSchemaList = useCallback(
+    async (
+      schemaListAPIParameter: GetAllSchemaListParameter,
+      flag: boolean,
+    ): Promise<void> => {
+      try {
+        setLoading(true)
+        let schemaResponse = undefined
+        if (flag) {
+          schemaResponse = await getAllSchemas(
+            schemaListAPIParameter,
+            schemaType,
+            ledger,
+          )
+        } else {
+          schemaResponse = await getAllSchemasByOrgId(
+            schemaListAPIParameter,
+            organizationId,
+          )
+        }
 
-      const { data } = schemaResponse as AxiosResponse
+        const { data } = schemaResponse as AxiosResponse
 
-      if (!data || data === 'Schema records not found') {
-        setSchemaList([])
-        setLoading(false)
-        return
-      }
+        if (!data || data === 'Schema records not found') {
+          setSchemaList([])
+          setLoading(false)
+          return
+        }
 
-      if (data?.statusCode === apiStatusCodes.API_STATUS_SUCCESS) {
-        const schemaData = data?.data?.data
-        if (data?.data?.data) {
-          setLastPage(data?.data?.lastPage - 1)
-          setTotalItem(data?.data?.totalItems)
-          setSchemaList([...schemaData])
+        if (data?.statusCode === apiStatusCodes.API_STATUS_SUCCESS) {
+          const schemaData = data?.data?.data
+          if (data?.data?.data) {
+            setLastPage(data?.data?.lastPage - 1)
+            setTotalItem(data?.data?.totalItems)
+            setSchemaList([...schemaData])
+          } else {
+            setSchemaListErr(schemaResponse as string)
+          }
         } else {
           setSchemaListErr(schemaResponse as string)
         }
-      } else {
-        setSchemaListErr(schemaResponse as string)
+      } catch (error) {
+        console.error('Error while fetching schema list:', error)
+      } finally {
+        setLoading(false)
+        setTimeout(() => setSchemaListErr(''), 3000)
       }
-    } catch (error) {
-      console.error('Error while fetching schema list:', error)
-    } finally {
+    },
+    [ledger, organizationId, schemaType],
+  )
+
+  const fetchOrganizationDetails = useCallback(
+    async (organizationId: string): Promise<void> => {
+      setLoading(true)
+      const response = await getOrganizationById(organizationId)
+      const { data } = response as AxiosResponse
+
+      if (data?.statusCode === apiStatusCodes.API_STATUS_SUCCESS) {
+        const did = data?.data?.org_agents?.[0]?.orgDid
+        const ledgerId = data?.data?.org_agents?.[0]?.ledgers?.id ?? ''
+        setLedger(ledgerId)
+
+        if (did) {
+          processDidSettings(did)
+        }
+      }
+
       setLoading(false)
-      setTimeout(() => setSchemaListErr(''), 3000)
-    }
-  }
-
-  const fetchOrganizationDetails = async (
-    organizationId: string,
-  ): Promise<void> => {
-    setLoading(true)
-    const response = await getOrganizationById(organizationId)
-    const { data } = response as AxiosResponse
-
-    if (data?.statusCode === apiStatusCodes.API_STATUS_SUCCESS) {
-      const did = data?.data?.org_agents?.[0]?.orgDid
-      const ledgerId = data?.data?.org_agents?.[0]?.ledgers?.id ?? ''
-      setLedger(ledgerId)
-
-      if (did) {
-        processDidSettings(did)
-      }
-    }
-
-    setLoading(false)
-  }
+    },
+    [processDidSettings],
+  )
 
   useEffect(() => {
     if (organizationId) {
-      setLoading(true)
       fetchOrganizationDetails(organizationId)
-        .then(() => {
-          getSchemaList(schemaListAPIParameter, allSchemaFlag)
-        })
-        .finally(() => {
-          setLoading(false)
-        })
     }
-  }, [organizationId])
+  }, [fetchOrganizationDetails, organizationId])
 
   useEffect(() => {
     if (organizationId) {
       getSchemaList(schemaListAPIParameter, allSchemaFlag)
     }
   }, [
-    schemaListAPIParameter.page,
+    allSchemaFlag,
+    getSchemaList,
+    organizationId,
     schemaListAPIParameter.allSearch,
+    schemaListAPIParameter.page,
     schemaListAPIParameter.search,
-    schemaType,
-    ledger,
   ])
 
   const onSearch = (event: ChangeEvent<HTMLInputElement>): void => {
@@ -383,7 +380,7 @@ const SchemaList = (props: {
   const handleClick = (): void => {
     if (isAdmin) {
       setLoading(true)
-      route.push('/schemas/create')
+      hardNavigate('/schemas/create')
     }
   }
 
@@ -520,7 +517,7 @@ const SchemaList = (props: {
               onClick={() => {
                 if (orgRole === 'admin' || orgRole === 'owner') {
                   setLoading(true)
-                  route.push('/schemas/create')
+                  hardNavigate('/schemas/create')
                 }
               }}
               disabled={(orgRole !== 'admin' && orgRole !== 'owner') || loading}

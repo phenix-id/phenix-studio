@@ -12,12 +12,13 @@ function RequiredAndDelete({
   values,
   element,
   remove,
+  highlightRequired,
 }: IRequiredAndDeleteProps): JSX.Element {
   return (
     <>
       <div className="absolute bottom-[-8px] left-6">
         <label
-          className="flex items-center space-x-2"
+          className={`flex items-center space-x-2 transition-colors ${highlightRequired ? 'text-amber-500 dark:text-amber-400' : ''}`}
           title="This will make the field required when issuing a credential"
         >
           <Checkbox
@@ -33,13 +34,9 @@ function RequiredAndDelete({
                 true,
               )
             }}
-            className={
-              'border-primary ring-offset-background focus-visible:ring-ring data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground dark:data-[state=checked]:bg-primary dark:data-[state=checked]:text-primary-foreground h-4 w-4 translate-y-[2px] rounded-sm border focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50'
-            }
+            className={`border-primary ring-offset-background focus-visible:ring-ring data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground dark:data-[state=checked]:bg-primary dark:data-[state=checked]:text-primary-foreground h-4 w-4 translate-y-[2px] rounded-sm border focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50 ${highlightRequired ? 'ring-2 ring-amber-400 ring-offset-1' : ''}`}
           />
-          <span className="text-foreground disabled:text-muted-foreground mt-1 text-sm">
-            Required
-          </span>
+          <span className="mt-1 text-sm">Required</span>
         </label>
       </div>
 

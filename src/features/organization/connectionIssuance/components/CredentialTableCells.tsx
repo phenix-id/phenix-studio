@@ -8,7 +8,7 @@ import {
 
 import DateTooltip from '@/components/DateTooltip'
 import { dateConversion } from '@/utils/DateConversion'
-import { useRouter } from 'next/navigation'
+import { hardNavigate } from '@/utils/navigation'
 
 export const ConnectionIdCell = ({
   connectionId,
@@ -31,8 +31,6 @@ export const SchemaNameCell = ({
   schemaId,
   isW3C,
 }: SchemaNameCellProps): React.JSX.Element => {
-  const router = useRouter()
-
   if (!schemaName) {
     return <span className="text-muted-foreground text-sm">Not Available</span>
   }
@@ -41,9 +39,9 @@ export const SchemaNameCell = ({
     <button
       onClick={() => {
         if (schemaId && !isW3C) {
-          router.push(`/schemas/${schemaId}?alias=${schemaName}`)
+          hardNavigate(`/schemas/${schemaId}?alias=${schemaName}`)
         } else {
-          router.push('/schemas')
+          hardNavigate('/schemas')
         }
       }}
       className="url-link cursor-pointer border-none bg-transparent p-0 text-sm"

@@ -3,20 +3,18 @@
 import { DidMethod, SchemaType, SchemaTypeValue } from '@/common/enums'
 import { FieldName, IAttributes, IFormData } from '../type/schemas-interface'
 import { type FormikErrors, type FormikProps } from 'formik'
-import React, { useEffect, useMemo, useState } from 'react'
-
+import React, { useCallback, useEffect, useId, useMemo, useState } from 'react'
 import {
   apiStatusCodes,
   optionsSchemaCreation as options,
 } from '../../../config/CommonConstant'
-
 import type { AxiosResponse } from 'axios'
 import { Card } from '@/components/ui/card'
 import FormikData from './FormikData'
 import { createSchemas } from '@/app/api/schema'
 import { getOrganizationById } from '@/app/api/organization'
+import { hardNavigate } from '@/utils/navigation'
 import { useAppSelector } from '@/lib/hooks'
-import { useRouter } from 'next/navigation'
 
 export interface IPopup {
   show: boolean
@@ -35,14 +33,14 @@ const CreateSchema = (): React.JSX.Element => {
   const [schemaTypeValues, setSchemaTypeValues] = useState<SchemaTypeValue>()
   const [type, setType] = useState<SchemaType>()
   const orgId = useAppSelector((state) => state.organization.orgId)
-
-  const route = useRouter()
+  const initialAttributeId = useId()
 
   const initFormData: IFormData = {
     schemaName: '',
     schemaVersion: '',
     attribute: [
       {
+        id: initialAttributeId,
         attributeName: '',
         schemaDataType: 'string',
         displayName: '',
@@ -50,7 +48,11 @@ const CreateSchema = (): React.JSX.Element => {
       },
     ],
   }
-  const fetchOrganizationDetails = async (): Promise<void> => {
+  const fetchOrganizationDetails = useCallback(async (): Promise<void> => {
+    if (!orgId) {
+      return
+    }
+
     setLoading(true)
     const response = await getOrganizationById(orgId as string)
     const { data } = response as AxiosResponse
@@ -74,13 +76,13 @@ const CreateSchema = (): React.JSX.Element => {
     }
 
     setLoading(false)
-  }
+  }, [orgId])
 
   const [formData, setFormData] = useState(initFormData)
 
   useEffect(() => {
     fetchOrganizationDetails()
-  }, [])
+  }, [fetchOrganizationDetails])
 
   const filledInputs = (formData: IFormData): boolean => {
     const { schemaName, schemaVersion, attribute } = formData
@@ -140,7 +142,7 @@ const CreateSchema = (): React.JSX.Element => {
       setLoading(true)
       setTimeout(() => {
         setSuccess(null)
-        route.push('/schemas')
+        hardNavigate('/schemas')
       }, 1500)
     } else {
       setFailure(createSchema as string)

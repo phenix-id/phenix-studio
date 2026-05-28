@@ -9,11 +9,10 @@ import {
   CardTitle,
 } from '@/components/ui/card'
 import { DidMethod, SchemaTypeValue } from '@/common/enums'
-import React, { useEffect, useState } from 'react'
+import React, { useCallback, useEffect, useState } from 'react'
 import {
   Tooltip,
   TooltipContent,
-  TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip'
 import { useAppDispatch, useAppSelector } from '@/lib/hooks'
@@ -29,8 +28,8 @@ import { ToolTipDataForSchema } from './TooltipData'
 import { dateConversion } from '@/utils/DateConversion'
 import { getAllSchemasByOrgId } from '@/app/api/schema'
 import { getUserProfile } from '@/app/api/Auth'
+import { hardNavigate } from '@/utils/navigation'
 import { pathRoutes } from '@/config/pathRoutes'
-import { useRouter } from 'next/navigation'
 
 type Schema = {
   id: string
@@ -67,7 +66,6 @@ const SchemasList = ({
   const pageSize = 10
   const [showTooltip, setShowTooltip] = useState(false)
   const [tooltipMessage, setTooltipMessage] = useState<string>('')
-  const router = useRouter()
   const token = useAppSelector((state) => state.auth.token)
   const orgId = useAppSelector((state) => state.organization.orgId)
   const [orgRole, setOrgRole] = useState<string | null>(null)
@@ -110,7 +108,12 @@ const SchemasList = ({
 
     fetchProfile()
   }, [token, orgId, dispatch])
-  const fetchSchemas = async (): Promise<void> => {
+  const fetchSchemas = useCallback(async (): Promise<void> => {
+    if (!orgId) {
+      setSchemas([])
+      return
+    }
+
     setLoading(true)
 
     try {
@@ -148,19 +151,17 @@ const SchemasList = ({
     } finally {
       setLoading(false)
     }
-  }
+  }, [currentPage, orgId, pageSize])
 
   useEffect(() => {
-    if (orgId) {
-      fetchSchemas()
-    }
-  }, [orgId])
+    fetchSchemas()
+  }, [fetchSchemas])
 
   const previewSchemas = schemas.slice(0, 3)
 
   const handleClickSchema = (schemaId: string): void => {
     const encodedSchemaId = encodeURIComponent(schemaId)
-    router.push(`/schemas/${encodedSchemaId}`)
+    hardNavigate(`/schemas/${encodedSchemaId}`)
   }
 
   const renderSchema = (schema: Schema, index: number): React.JSX.Element => {
@@ -174,7 +175,7 @@ const SchemasList = ({
           if (isIndySchema) {
             handleClickSchema(schema.schemaLedgerId)
           } else {
-            router.push(pathRoutes.organizations.schemas)
+            hardNavigate(pathRoutes.organizations.schemas)
           }
         }}
         aria-disabled={!isIndySchema}
@@ -225,7 +226,7 @@ const SchemasList = ({
       setShowTooltip(true)
     } else {
       setIsSchemaLoading(true)
-      router.push('/schemas/create')
+      hardNavigate('/schemas/create')
       return
     }
 
@@ -237,16 +238,14 @@ const SchemasList = ({
       <CardHeader className="pb-2">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <CardTitle className="text-xl">Schemas</CardTitle>
-                </TooltipTrigger>
-                <TooltipContent side="bottom" sideOffset={4}>
-                  <ToolTipDataForSchema />
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <CardTitle className="text-xl">Schemas</CardTitle>
+              </TooltipTrigger>
+              <TooltipContent side="bottom" sideOffset={4}>
+                <ToolTipDataForSchema />
+              </TooltipContent>
+            </Tooltip>
             <Badge>{schemas.length}</Badge>
           </div>
 
