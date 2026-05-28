@@ -366,10 +366,18 @@ export default function DeleteOrganizationPage(): React.JSX.Element {
           <span className="text-lg font-bold">{orgData?.name}</span>?
         </>
       ),
-      isDisabled: isWalletPresent,
-      blockingReason: isWalletPresent
-        ? 'Delete organization wallet first (Step 4)'
-        : null,
+      isDisabled:
+        isWalletPresent || connCount > 0 || issCount > 0 || verCount > 0,
+      blockingReason:
+        connCount > 0
+          ? 'Delete connections first (Step 3)'
+          : issCount > 0
+            ? 'Delete issuance records first (Step 2)'
+            : verCount > 0
+              ? 'Delete verifications first (Step 1)'
+              : isWalletPresent
+                ? 'Delete organization wallet first (Step 4)'
+                : null,
     },
   ]
 
