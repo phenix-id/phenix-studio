@@ -10,12 +10,6 @@ import {
   PaginationPrevious,
 } from '@/components/ui/pagination'
 import React, { useEffect, useState } from 'react'
-import {
-  setOrgId,
-  setOrgInfo,
-  setSelectedOrgId,
-  setTenantData,
-} from '@/lib/orgSlice'
 
 import { AxiosResponse } from 'axios'
 import { Button } from '@/components/ui/button'
@@ -27,7 +21,6 @@ import { Plus } from 'lucide-react'
 import { apiStatusCodes } from '@/config/CommonConstant'
 import { getOrganizations } from '@/app/api/organization'
 import { hardNavigate } from '@/utils/navigation'
-import { useAppDispatch } from '@/lib/hooks'
 
 export const OrganizationList = (): React.JSX.Element => {
   const [organizationsList, setOrganizationsList] = useState<Organization[]>([])
@@ -41,8 +34,6 @@ export const OrganizationList = (): React.JSX.Element => {
     total: 0,
     totalCount: 0,
   })
-
-  const dispatch = useAppDispatch()
 
   const getAllOrganizations = async (): Promise<void> => {
     setLoading(true)
@@ -89,39 +80,6 @@ export const OrganizationList = (): React.JSX.Element => {
     setCurrentPage((prev) => ({ ...prev, pageNumber: newPage }))
   }
 
-  const handleCardClick = (orgId: string): void => {
-    if (!orgId) {
-      console.error('Invalid organization ID')
-      return
-    }
-
-    const selectedOrg = organizationsList.find((org) => org.id === orgId)
-
-    if (selectedOrg) {
-      dispatch(setOrgId(selectedOrg.id))
-      dispatch(setSelectedOrgId(selectedOrg.id))
-      dispatch(
-        setTenantData({
-          id: selectedOrg.id,
-          name: selectedOrg.name,
-          logoUrl: selectedOrg.logoUrl,
-        }),
-      )
-      const orgRoles = selectedOrg?.userOrgRoles
-
-      dispatch(
-        setOrgInfo({
-          id: selectedOrg.id,
-          name: selectedOrg.name,
-          description: selectedOrg.description,
-          logoUrl: selectedOrg.logoUrl,
-          roles: orgRoles?.map((item) => item?.orgRole?.name) ?? [],
-        }),
-      )
-    }
-
-    hardNavigate(`/${orgId}`)
-  }
   const handleCreateOrg = (): void => {
     setIsCreatingOrg(true)
 
@@ -172,8 +130,7 @@ export const OrganizationList = (): React.JSX.Element => {
           organizationsList.map((org) => (
             <Card
               key={org.id}
-              onClick={() => handleCardClick(org.id)}
-              className="border-border relative h-full w-full cursor-pointer overflow-hidden rounded-xl border p-6 py-4 shadow-xl transition-all duration-300 hover:scale-[1.02]"
+              className="border-border relative h-full w-full overflow-hidden rounded-xl border p-6 py-4 shadow-xl"
             >
               <div className="flex items-start gap-4">
                 <Avatar className="h-16 w-16 rounded-md">
