@@ -214,6 +214,7 @@ export interface IRequiredAndDeleteProps {
   element: IAttributes
   remove: (index: number) => void
   areFirstInputsSelected: boolean
+  highlightRequired?: boolean
 }
 
 export interface ISidebarSliderData {

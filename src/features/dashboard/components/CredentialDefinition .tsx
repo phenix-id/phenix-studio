@@ -8,7 +8,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
-import React, { useEffect, useState } from 'react'
+import React, { useCallback, useEffect, useState } from 'react'
 import {
   Tooltip,
   TooltipContent,
@@ -21,8 +21,8 @@ import { CredentialDefinitionIcon } from '@/components/iconsSvg'
 import { Skeleton } from '@/components/ui/skeleton'
 import { ToolTipDataForCredDef } from './TooltipData'
 import { getAllCredDef } from '@/app/api/schema'
+import { hardNavigate } from '@/utils/navigation'
 import { useAppSelector } from '@/lib/hooks'
-import { useRouter } from 'next/navigation'
 
 interface CredentialDefinitionType {
   tag: string
@@ -36,9 +36,13 @@ const CredentialDefinition = (): React.JSX.Element => {
     CredentialDefinitionType[]
   >([])
 
-  const router = useRouter()
   const orgId = useAppSelector((state) => state.organization.orgId)
-  const fetchCredentialDefinitionById = async (): Promise<void> => {
+  const fetchCredentialDefinitionById = useCallback(async (): Promise<void> => {
+    if (!orgId) {
+      setCredentialDefinition([])
+      return
+    }
+
     setLoading(true)
     try {
       const response = await getAllCredDef(orgId as string)
@@ -53,16 +57,14 @@ const CredentialDefinition = (): React.JSX.Element => {
     } finally {
       setLoading(false)
     }
-  }
-
-  useEffect(() => {
-    if (orgId) {
-      fetchCredentialDefinitionById()
-    }
   }, [orgId])
 
+  useEffect(() => {
+    fetchCredentialDefinitionById()
+  }, [fetchCredentialDefinitionById])
+
   const handleClickCredDef = (schemaId: string): void => {
-    router.push(`/schemas/${schemaId}`)
+    hardNavigate(`/schemas/${schemaId}`)
   }
 
   return (
