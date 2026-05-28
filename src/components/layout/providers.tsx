@@ -5,6 +5,7 @@ import { SessionProvider, SessionProviderProps } from 'next-auth/react'
 import { ActiveThemeProvider } from '../active-theme'
 import React from 'react'
 import ThemeProvider from './ThemeToggle/theme-provider'
+import { TooltipProvider } from '@/components/ui/tooltip'
 
 export default function Providers({
   session,
@@ -30,7 +31,7 @@ export default function Providers({
           refetchInterval={0}
           key={session?.user.id}
         >
-          {children}
+          <TooltipProvider delayDuration={0}>{children}</TooltipProvider>
         </SessionProvider>
       </ActiveThemeProvider>
     </ThemeProvider>

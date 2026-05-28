@@ -3,7 +3,7 @@
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Card, CardContent } from '@/components/ui/card'
 import { IOrgDashboard, IOrganisation } from './interfaces/organization'
-import React, { useEffect, useState } from 'react'
+import React, { useCallback, useEffect, useState } from 'react'
 import {
   Tooltip,
   TooltipContent,
@@ -19,7 +19,6 @@ import { Edit } from 'lucide-react'
 import { apiStatusCodes } from '@/config/CommonConstant'
 import { hardNavigate } from '@/utils/navigation'
 import { useAppSelector } from '@/lib/hooks'
-import { useRouter } from 'next/navigation'
 
 type OrganizationDashboardProps = {
   orgId: string
@@ -33,7 +32,6 @@ export const OrganizationDashboard = ({
   orgId,
   setOrgDataForDetails,
 }: OrganizationDashboardProps): React.JSX.Element => {
-  const router = useRouter()
   const [orgData, setOrgData] = useState<IOrganisation | null>(null)
   const [orgDashboard, setOrgDashboard] = useState<IOrgDashboard | null>(null)
   const [, setLoading] = useState(true)
@@ -44,7 +42,7 @@ export const OrganizationDashboard = ({
   )
   const activeOrgId = selectedDropdownOrgId || orgId
 
-  const fetchOrganizationDetails = async (): Promise<void> => {
+  const fetchOrganizationDetails = useCallback(async (): Promise<void> => {
     if (!activeOrgId) {
       return
     }
@@ -65,20 +63,21 @@ export const OrganizationDashboard = ({
     } else {
       console.error(response as string)
     }
-  }
+  }, [activeOrgId, setOrgDataForDetails])
 
-  const fetchOrganizationDashboardDetails = async (): Promise<void> => {
-    if (activeOrgId) {
-      const response = await getOrgDashboard(activeOrgId)
-      const { data } = response as AxiosResponse
+  const fetchOrganizationDashboardDetails =
+    useCallback(async (): Promise<void> => {
+      if (activeOrgId) {
+        const response = await getOrgDashboard(activeOrgId)
+        const { data } = response as AxiosResponse
 
-      if (data?.statusCode === apiStatusCodes.API_STATUS_SUCCESS) {
-        setOrgDashboard(data?.data)
-      } else {
-        console.error(response as string)
+        if (data?.statusCode === apiStatusCodes.API_STATUS_SUCCESS) {
+          setOrgDashboard(data?.data)
+        } else {
+          console.error(response as string)
+        }
       }
-    }
-  }
+    }, [activeOrgId])
 
   const handleEditOrg = (): void => {
     hardNavigate(`/create-organization?orgId=${activeOrgId}`)
@@ -96,7 +95,7 @@ export const OrganizationDashboard = ({
       setLoading(false)
     }
     loadData()
-  }, [activeOrgId])
+  }, [fetchOrganizationDetails, fetchOrganizationDashboardDetails])
 
   return (
     <div className="container mx-auto space-y-6 px-4 py-6">
@@ -177,7 +176,7 @@ export const OrganizationDashboard = ({
       <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
         <Card
           className="shadow transition-all hover:scale-102"
-          onClick={() => router.push('/users')}
+          onClick={() => hardNavigate('/users')}
         >
           <CardContent className="flex cursor-pointer items-center justify-between p-6">
             <div>
@@ -211,7 +210,7 @@ export const OrganizationDashboard = ({
           }`}
           onClick={() => {
             if (walletStatus) {
-              router.push('/schemas')
+              hardNavigate('/schemas')
             }
           }}
         >

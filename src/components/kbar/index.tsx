@@ -8,11 +8,10 @@ import {
   KBarSearch,
 } from 'kbar'
 import React, { useMemo } from 'react'
-import { usePathname, useRouter } from 'next/navigation'
-
 import { NavItem } from '../../../types'
 import RenderResults from './render-result'
 import { navItems } from '@/constants/data'
+import { useRouter } from 'next/navigation'
 
 export type KBarAction = {
   id: string
@@ -62,7 +61,6 @@ export default function KBar({
   children: React.ReactNode
 }): React.JSX.Element {
   const router = useRouter()
-  const pathname = usePathname()
 
   const [refreshKey, setRefreshKey] = React.useState(0)
 
@@ -133,9 +131,7 @@ export default function KBar({
 
   return (
     <KBarProvider actions={actions}>
-      <KBarComponent key={`${pathname}-${refreshKey}`}>
-        {children}
-      </KBarComponent>
+      <KBarComponent key={refreshKey}>{children}</KBarComponent>
     </KBarProvider>
   )
 }
