@@ -14,7 +14,6 @@ import Loader from '@/components/Loader'
 import SOCKET from '@/config/SocketConfig'
 import { apiStatusCodes } from '@/config/CommonConstant'
 import { getOrganizationById } from '@/app/api/organization'
-import { nanoid } from 'nanoid'
 import { spinupSharedAgent } from '@/app/api/Agent'
 
 interface SharedAgentFormProps {
@@ -89,11 +88,6 @@ const SharedAgentForm = ({
 
     const payload = {
       label: values.label,
-      seed: nanoid(32),
-      keyType: 'ed25519',
-      method: 'key',
-      network: '',
-      role: '',
       clientSocketId: SOCKET.id,
     }
 
