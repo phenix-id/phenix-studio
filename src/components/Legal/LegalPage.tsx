@@ -58,15 +58,31 @@ export function LegalPage({
           ))}
         </div>
 
-        <footer className="text-muted-foreground border-t pt-6 text-sm">
-          Contact{' '}
-          <a
-            href={`mailto:${marketplaceLegal.supportEmail}`}
+        <footer className="text-muted-foreground flex flex-col gap-2 border-t pt-6 text-sm sm:flex-row sm:items-center sm:gap-6">
+          <span>
+            Support:{' '}
+            <a
+              href={`mailto:${marketplaceLegal.supportEmail}`}
+              className="text-primary font-medium hover:underline"
+            >
+              {marketplaceLegal.supportEmail}
+            </a>
+          </span>
+          <span>
+            Privacy:{' '}
+            <a
+              href={`mailto:${marketplaceLegal.privacyEmail}`}
+              className="text-primary font-medium hover:underline"
+            >
+              {marketplaceLegal.privacyEmail}
+            </a>
+          </span>
+          <Link
+            href="/marketplace/landing"
             className="text-primary font-medium hover:underline"
           >
-            {marketplaceLegal.supportEmail}
-          </a>{' '}
-          for Marketplace onboarding or service support.
+            Marketplace landing
+          </Link>
         </footer>
       </div>
     </main>
