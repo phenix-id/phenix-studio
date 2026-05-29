@@ -48,19 +48,19 @@ export const protocolOptions = [
 export const subOptionsMap = {
   didcomm: [
     {
-      id: 'anoncreds',
-      title: 'AnonCreds',
-      desc: 'Privacy-preserving credentials issued over DIDComm.',
-      tooltip:
-        'AnonCreds enables privacy-preserving credentials using ZK proofs.',
-      disabled: false,
-    },
-    {
       id: 'w3c',
       title: 'W3C VCDM',
       desc: 'W3C Verifiable Credentials compatible with DIDComm transport.',
       tooltip: 'W3C VCDM defines interoperable verifiable credentials.',
       disabled: false,
+    },
+    {
+      id: 'anoncreds',
+      title: 'AnonCreds',
+      desc: 'Privacy-preserving credentials issued over DIDComm.',
+      tooltip:
+        'AnonCreds enables privacy-preserving credentials using ZK proofs.',
+      disabled: true,
     },
   ],
 
