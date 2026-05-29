@@ -143,18 +143,18 @@ const WalletSetup = (): React.JSX.Element => {
 
                 <div>
                   <div className="mb-1 flex flex-wrap items-center gap-2">
-                    <h3 className="font-semibold text-gray-800">
+                    <h3 className="text-foreground font-semibold">
                       Dedicated Agent
                     </h3>
                     <Badge variant="outline" className="rounded-full">
                       Coming soon
                     </Badge>
                   </div>
-                  <p className="text-sm text-gray-600">
+                  <p className="text-muted-foreground text-sm">
                     Dedicated agent creation is not available for SaaS
                     workspaces yet.
                   </p>
-                  <ul className="mt-2 ml-5 list-disc space-y-1 text-sm text-gray-600">
+                  <ul className="text-muted-foreground mt-2 ml-5 list-disc space-y-1 text-sm">
                     <li>Higher performance and reliability</li>
                     <li>Enhanced privacy and security</li>
                     <li>Full control over the agent infrastructure</li>
@@ -167,8 +167,8 @@ const WalletSetup = (): React.JSX.Element => {
               htmlFor="shared"
               className={`cursor-pointer rounded-2xl border p-5 transition-all ${
                 agentType === AgentType.SHARED
-                  ? 'border-blue-500 bg-blue-50 shadow-md'
-                  : 'border-gray-200 hover:border-blue-300'
+                  ? 'border-primary bg-accent dark:bg-accent shadow-md'
+                  : 'border-border hover:border-primary/50'
               }`}
             >
               <div className="flex items-start space-x-3">
@@ -178,13 +178,13 @@ const WalletSetup = (): React.JSX.Element => {
                   value={AgentType.SHARED}
                 />
                 <div>
-                  <h3 className="mb-1 font-semibold text-gray-800">
+                  <h3 className="text-foreground mb-1 font-semibold">
                     Shared Agent
                   </h3>
-                  <p className="text-sm text-gray-600">
+                  <p className="text-muted-foreground text-sm">
                     Use our cloud-hosted shared agent infrastructure
                   </p>
-                  <ul className="mt-2 ml-5 list-disc space-y-1 text-sm text-gray-600">
+                  <ul className="text-muted-foreground mt-2 ml-5 list-disc space-y-1 text-sm">
                     <li>Cost-effective solution</li>
                     <li>Managed infrastructure</li>
                     <li>Quick setup with no maintenance</li>
@@ -212,7 +212,7 @@ const WalletSetup = (): React.JSX.Element => {
           onEscapeKeyDown={(e) => e.preventDefault()}
         >
           <div className="flex justify-center">
-            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-green-100">
+            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-green-100 dark:bg-green-900">
               <svg
                 className="h-9 w-9 text-green-600"
                 fill="none"
@@ -229,11 +229,11 @@ const WalletSetup = (): React.JSX.Element => {
             </div>
           </div>
 
-          <h2 className="text-xl font-semibold text-gray-800">
+          <h2 className="text-foreground text-xl font-semibold">
             Wallet created successfully!
           </h2>
 
-          <p className="text-gray-600">
+          <p className="text-muted-foreground">
             {redirectTo || clientAlias
               ? 'Proceed to DID creation to continue your setup.'
               : 'Would you like to continue with DID creation or skip it for now?'}
@@ -259,7 +259,7 @@ const WalletSetup = (): React.JSX.Element => {
                 setActiveButton('continue')
                 handleContinue()
               }}
-              className="bg-blue-600 px-6 text-white hover:bg-blue-700"
+              className="px-6"
               disabled={activeButton !== null}
             >
               {activeButton === 'continue' ? <Loader /> : 'Continue'}

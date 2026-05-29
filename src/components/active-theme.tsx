@@ -10,7 +10,7 @@ import React, {
 } from 'react'
 
 const COOKIE_NAME = 'active_theme'
-const DEFAULT_THEME = 'credebl'
+const DEFAULT_THEME = 'phenix'
 
 /** Set the theme in a cookie */
 function setThemeCookie(theme: string): void {

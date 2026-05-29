@@ -2,7 +2,10 @@
 
 @import 'tw-animate-css';
 
-@import '../../public/themes/sovio_theme.css';
+@import '../../public/themes/phenix_theme.css';
+
+/* Tell Tailwind v4 to use the .dark class (from next-themes) for dark: utilities */
+@custom-variant dark (&:where(.dark, .dark *));
 
 /* Cursor pointer globally for buttons */
 button:not(:disabled),
@@ -17,7 +20,7 @@ a[href] {
 }
 
 .bg-warning {
-  background-color: #facc15;
+  background-color: var(--warning);
 }
 
 .bg-error {
@@ -30,118 +33,66 @@ a[href] {
 }
 
 .green-text {
-  color: #339b59;
+  color: var(--success-text);
 }
 
 .text-error {
   color: var(--error-text);
 }
 
-ul.timelinestatic > li:before {
-  content: counter(step);
-  counter-increment: step;
-  display: inline-block;
-  position: absolute;
-  border-radius: 50%;
-  left: 9px;
-  font-size: 20px;
-  padding: 0.5rem 0;
-  z-index: 1;
-  vertical-align: middle;
-  text-align: center;
-  width: 45px;
-  font-weight: bold;
-  height: 45px;
-  color: #000000;
-  background: var(--primary);
-}
-
-ul.timelinestatic {
-  list-style-type: none;
-  position: relative;
-  counter-reset: step;
-}
-
-ul.timelinestatic:before {
-  content: ' ';
-  background: var(--primary);
-  display: inline-block;
-  position: absolute;
-  left: 29px;
-  width: 6px;
-  height: 90%;
-  z-index: 1;
-}
-
-ul.timelinestatic > li:last-child {
-  height: auto;
-}
-
-ul.timelinestatic > li {
-  margin-left: 64px;
-  padding-left: 20px;
-  height: 100px;
-}
-
-.text-revocable-yes {
-  color: var(--color-revocable-yes, #1d4ed8);
-}
-
-.text-revocable-no {
-  color: var(--color-revocable-no, #06b6d4);
-}
-
 .badges-warning {
-  background-color: #ffedd5;
+  background-color: var(--badge-warning-bg);
+  color: var(--badge-warning-text);
 }
 
 .badges-success {
-  background-color: #dcfce7;
+  background-color: var(--badge-success-bg);
+  color: var(--badge-success-text);
 }
 
 .badges-error {
-  background-color: #fee2e2;
+  background-color: var(--badge-error-bg);
+  color: var(--badge-error-text);
 }
 
 .badges-secondary {
-  background-color: #7dd3fc;
-}
-
-* {
-  border-color: var(--color-border);
+  background-color: var(--badge-info-bg);
+  color: var(--badge-info-text);
 }
 
 .status-pending {
-  background-color: #ffedd5;
-  color: #c2410c;
+  background-color: var(--status-pending-bg);
+  color: var(--status-pending-text);
 }
 
 .status-accepted {
-  background-color: #dcfce7;
-  color: #065f46;
+  background-color: var(--status-accepted-bg);
+  color: var(--status-accepted-text);
 }
 
 .status-rejected {
-  background-color: #fee2e2;
-  color: #b91c1c;
+  background-color: var(--status-rejected-bg);
+  color: var(--status-rejected-text);
 }
 
 .success-alert {
-  background-color: #dcfce7;
-  color: #008236;
+  background-color: var(--alert-success-bg);
+  color: var(--alert-success-text);
+  border-color: var(--alert-success-border);
 }
 
 .failure-alert {
-  background-color: #ffe2e2;
-  color: #e7000b;
+  background-color: var(--alert-error-bg);
+  color: var(--alert-error-text);
+  border-color: var(--alert-error-border);
 }
 
 .success-alert div {
-  color: #008236;
+  color: var(--alert-success-text);
 }
 
 .failure-alert div {
-  color: #e7000b;
+  color: var(--alert-error-text);
 }
 
 .animate-text {
@@ -216,7 +167,7 @@ ul.timelinestatic > li {
 }
 
 .url-link:hover {
-  color: #0265fd !important;
+  color: var(--primary) !important;
   text-decoration: underline;
 }
 

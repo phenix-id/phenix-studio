@@ -89,7 +89,7 @@ export default function VerifyEmailPage(): React.JSX.Element {
                 </div>
               </div>
               <h1 className="text-2xl font-bold">Congratulations!</h1>
-              <h2 className="text-xl text-gray-700">
+              <h2 className="text-muted-foreground text-xl">
                 Email verified successfully
               </h2>
               <Button

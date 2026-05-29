@@ -3,11 +3,11 @@ body {
 }
 
 :root {
-  --font-inter: Inter, ui-sans-serif, system-ui, sans-serif;
-  --font-mono: 'Noto Sans Mono', ui-monospace, SFMono-Regular, Menlo, Monaco,
-    Consolas, 'Liberation Mono', 'Courier New', monospace;
-  --font-sans: var(--font-inter);
   --header-height: calc(var(--spacing) * 12 + 1px);
+}
+
+* {
+  border-color: var(--color-border);
 }
 
 .theme-scaled {
@@ -29,35 +29,7 @@ body {
   }
 }
 
-button:not(:disabled),
-[role='button']:not(:disabled),
-a[href] {
-  cursor: pointer;
-}
-
-.bg-success {
-  background-color: var(--success);
-  color: #42c773;
-}
-
-.bg-error {
-  background-color: var(--error);
-  color: white;
-}
-
-.text-success {
-  color: var(--success-text);
-}
-
-.green-text {
-  color: #339b59;
-}
-
-.text-error {
-  color: var(--error-text);
-}
-
-ul.timelinestatic > li:before {
+ul.timelinestatic > li::before {
   content: counter(step);
   counter-increment: step;
   display: inline-block;
@@ -72,7 +44,7 @@ ul.timelinestatic > li:before {
   width: 45px;
   font-weight: bold;
   height: 45px;
-  color: #000000;
+  color: var(--primary-foreground);
   background: var(--primary);
 }
 
@@ -82,7 +54,7 @@ ul.timelinestatic {
   counter-reset: step;
 }
 
-ul.timelinestatic:before {
+ul.timelinestatic::before {
   content: ' ';
   background: var(--primary);
   display: inline-block;
@@ -109,35 +81,4 @@ ul.timelinestatic > li {
 
 .text-revocable-no {
   color: var(--color-revocable-no, #06b6d4);
-}
-
-.badges-warning {
-  background-color: #ffedd5;
-}
-
-.badges-success {
-  background-color: #dcfce7;
-}
-
-.badges-error {
-  background-color: #fee2e2;
-}
-
-* {
-  border-color: var(--color-border);
-}
-
-.status-pending {
-  background-color: #ffedd5;
-  color: #c2410c;
-}
-
-.status-accepted {
-  background-color: #dcfce7;
-  color: #065f46;
-}
-
-.status-rejected {
-  background-color: #fee2e2;
-  color: #b91c1c;
 }

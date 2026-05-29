@@ -7,6 +7,7 @@ import {
   CollapsibleTrigger,
 } from '@/components/ui/collapsible'
 import React, { JSX, useEffect, useState } from 'react'
+import { useTheme } from 'next-themes'
 import {
   Sidebar,
   SidebarContent,
@@ -23,6 +24,7 @@ import {
 import {
   appFaviconPath,
   appLogoAltText,
+  appLogoDarkPath,
   appLogoPath,
   currentPageNumber,
   itemPerPage,
@@ -50,15 +52,8 @@ import { setSidebarCollapsed } from '@/lib/sidebarSlice'
 
 const APP_CONFIG = {
   logo: appLogoPath,
+  logoDark: appLogoDarkPath,
   collapsedLogo: appFaviconPath,
-  poweredBy: (): { src: string; alt: string } | null => {
-    const activeTheme =
-      process.env.NEXT_PUBLIC_ACTIVE_THEME?.toLowerCase().trim() || 'credebl'
-    if (activeTheme === 'credebl') {
-      return null
-    }
-    return { src: appLogoPath, alt: 'Powered by Phenix' }
-  },
 }
 
 export default function AppSidebar(): React.JSX.Element {
@@ -66,9 +61,16 @@ export default function AppSidebar(): React.JSX.Element {
 
   const dispatch = useAppDispatch()
 
-  const logoImageSrc = APP_CONFIG.logo
+  const { resolvedTheme } = useTheme()
+  const [mounted, setMounted] = useState(false)
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
+  const logoImageSrc =
+    mounted && resolvedTheme === 'dark' ? APP_CONFIG.logoDark : APP_CONFIG.logo
   const collapsedLogoImageSrc = APP_CONFIG.collapsedLogo
-  const poweredBy = APP_CONFIG.poweredBy()
 
   const [currentPage] = useState(currentPageNumber)
   const [pageSize] = useState(itemPerPage)
@@ -267,30 +269,6 @@ export default function AppSidebar(): React.JSX.Element {
         </SidebarGroup>
       </SidebarContent>
 
-      {poweredBy && (
-        <div className="text-muted-foreground flex items-center justify-center border-t p-3 text-sm group-data-[collapsed=true]:flex-col group-data-[collapsed=true]:gap-1">
-          {!isCollapsed ? (
-            <Image
-              src={appFaviconPath}
-              alt={poweredBy.alt}
-              width={30}
-              height={30}
-              className="h-5 w-auto object-contain"
-            />
-          ) : (
-            <>
-              <span className="mr-2">Powered by</span>
-              <Image
-                src={poweredBy.src}
-                alt={poweredBy.alt}
-                width={90}
-                height={30}
-                className="h-5 w-auto object-contain"
-              />
-            </>
-          )}
-        </div>
-      )}
       <SidebarRail />
     </Sidebar>
   )

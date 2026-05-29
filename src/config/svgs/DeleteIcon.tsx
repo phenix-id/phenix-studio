@@ -4,8 +4,8 @@ export const DeleteIcon = (): React.JSX.Element => (
     fill="none"
     viewBox="0 0 24 24"
     strokeWidth={1.5}
-    stroke="red"
-    className="!h-5 !w-5"
+    stroke="currentColor"
+    className="text-destructive !h-5 !w-5"
   >
     <path
       strokeLinecap="round"
