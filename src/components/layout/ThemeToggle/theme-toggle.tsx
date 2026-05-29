@@ -2,8 +2,9 @@
 
 import * as React from 'react'
 
+import { IconMoon, IconSun } from '@tabler/icons-react'
+
 import { Button } from '@/components/ui/button'
-import { IconBrightness } from '@tabler/icons-react'
 import { useTheme } from 'next-themes'
 
 export function ModeToggle(): React.JSX.Element {
@@ -15,13 +16,14 @@ export function ModeToggle(): React.JSX.Element {
 
   return (
     <Button
-      variant="secondary"
+      variant="ghost"
       size="icon"
-      className="group/toggle size-8"
+      className="size-8"
       onClick={toggleTheme}
+      aria-label="Toggle light/dark mode"
     >
-      <IconBrightness />
-      <span className="sr-only">Toggle theme</span>
+      <IconSun className="dark:hidden" strokeWidth={1.5} size={17} />
+      <IconMoon className="hidden dark:block" strokeWidth={1.5} size={17} />
     </Button>
   )
 }

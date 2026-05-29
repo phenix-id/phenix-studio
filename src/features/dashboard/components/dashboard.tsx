@@ -4,7 +4,7 @@ import {
   IOrgAgent,
   IOrganisation,
 } from '@/features/organization/components/interfaces/organization'
-import React, { useEffect, useState } from 'react'
+import React, { useCallback, useEffect, useState } from 'react'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import {
   getUserEcosystemInvitations,
@@ -53,7 +53,7 @@ export default function Dashboard(): React.JSX.Element {
   const dispatch = useAppDispatch()
   const firstName = useAppSelector((state) => state.profile.firstName)
 
-  const getAllInvitations = async (): Promise<void> => {
+  const getAllInvitations = useCallback(async (): Promise<void> => {
     try {
       const response = await getUserInvitations(
         currentPage.pageNumber,
@@ -76,9 +76,9 @@ export default function Dashboard(): React.JSX.Element {
     } catch (err) {
       console.error('An unexpected error occurred', err)
     }
-  }
+  }, [currentPage])
 
-  const getAllEcosystemInvitations = async (): Promise<void> => {
+  const getAllEcosystemInvitations = useCallback(async (): Promise<void> => {
     try {
       const response = await getUserEcosystemInvitations(
         currentPage.pageNumber,
@@ -104,9 +104,9 @@ export default function Dashboard(): React.JSX.Element {
     } catch (err) {
       console.error('An unexpected error occurred.', err)
     }
-  }
+  }, [currentPage, orgId])
 
-  async function getEcosystemEnableStatus(): Promise<void> {
+  const getEcosystemEnableStatus = useCallback(async (): Promise<void> => {
     try {
       const response = await getEcosystemEnableStausApi()
       const { data } = response as AxiosResponse
@@ -114,15 +114,9 @@ export default function Dashboard(): React.JSX.Element {
     } catch (error) {
       console.error('failed to fetch ecosystem status', error)
     }
-  }
+  }, [dispatch])
 
-  useEffect(() => {
-    getAllInvitations()
-    getAllEcosystemInvitations()
-    getEcosystemEnableStatus()
-  }, [])
-
-  const fetchOrganizationDetails = async (): Promise<void> => {
+  const fetchOrganizationDetails = useCallback(async (): Promise<void> => {
     if (!orgId) {
       setHasOrganization(false)
       setWalletData([])
@@ -151,7 +145,13 @@ export default function Dashboard(): React.JSX.Element {
     } finally {
       setWalletLoading(false)
     }
-  }
+  }, [orgId, dispatch])
+
+  useEffect(() => {
+    getAllInvitations()
+    getAllEcosystemInvitations()
+    getEcosystemEnableStatus()
+  }, [getAllInvitations, getAllEcosystemInvitations, getEcosystemEnableStatus])
 
   useEffect(() => {
     if (orgId) {
@@ -159,7 +159,7 @@ export default function Dashboard(): React.JSX.Element {
     } else {
       setWalletLoading(false)
     }
-  }, [orgId])
+  }, [orgId, fetchOrganizationDetails])
 
   const handleCreateWallet = (): void => {
     if (!orgId) {
@@ -222,7 +222,7 @@ export default function Dashboard(): React.JSX.Element {
       <div className="relative mb-6 flex min-h-[150px] flex-col justify-center overflow-hidden rounded-md bg-[url('/images/bg-lightwallet.png')] bg-cover bg-center bg-no-repeat p-6 shadow-sm dark:bg-[url('/images/bg-darkwallet.png')] dark:bg-cover">
         <div className="flex flex-col items-start">
           <h3 className="text-xl font-semibold">Wallet Details</h3>
-          <p className="mt-2 text-sm text-gray-700">
+          <p className="mt-2 text-sm">
             DID is already created for your organization.
           </p>
         </div>
