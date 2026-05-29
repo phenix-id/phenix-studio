@@ -47,9 +47,9 @@ const isValidUuid = (value: string): boolean =>
 
 const CreateDid = (): React.JSX.Element => {
   const [selectedProtocol, setSelectedProtocol] = useState<Protocol | null>(
-    null,
+    'didcomm',
   )
-  const [selectedOption, setSelectedOption] = useState<string | null>(null)
+  const [selectedOption, setSelectedOption] = useState<string | null>('w3c')
   const [isApiInProgress, setIsApiInProgress] = useState<boolean>(false)
   const [selectedDid, setSelectedDid] = useState<string | null>(null)
   const [seeds, setSeeds] = useState<string>('')
