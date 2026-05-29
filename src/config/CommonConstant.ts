@@ -135,6 +135,7 @@ const imageBasePath = '/images'
 const logoBasePath = '/logos'
 
 export const appLogoPath = `${logoBasePath}/Phenix_Logo.png`
+export const appLogoDarkPath = `${logoBasePath}/Phenix_Logo_White.png`
 export const appFaviconPath = `${logoBasePath}/favicon.png`
 export const appLogoAltText = 'Phenix Logo'
 export const appLogoWidth = 781

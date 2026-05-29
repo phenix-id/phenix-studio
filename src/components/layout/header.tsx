@@ -12,6 +12,7 @@ import { useAppDispatch, useAppSelector } from '@/lib/hooks'
 
 import AppLauncher from '../AppLauncher'
 import { Breadcrumbs } from '../breadcrumbs'
+import { ModeToggle } from './ThemeToggle/theme-toggle'
 import { OrgSwitcher } from '../org-switcher'
 import { Organisation } from '@/features/dashboard/type/organization'
 import { SidebarTrigger } from '../ui/sidebar'
@@ -73,7 +74,7 @@ export default function Header(): React.JSX.Element {
     }
 
     fetchOrganizations()
-  }, [])
+  }, [dispatch, tenantId])
 
   const handleSwitchTenant = (orgId: string): void => {
     const selected = orgList.find((org) => org.id === orgId)
@@ -121,9 +122,7 @@ export default function Header(): React.JSX.Element {
       <div className="flex items-center gap-2 px-4">
         {enableAppLauncher && <AppLauncher />}
 
-        {/* NOTE: Currently disabling search and mode toggle */}
-        <div className="hidden md:flex">{/* <SearchInput /> */}</div>
-        {/* <ModeToggle /> */}
+        <ModeToggle />
         <UserNav />
       </div>
     </header>
