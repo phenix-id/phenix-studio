@@ -252,22 +252,6 @@ const CreateDid = (): React.JSX.Element => {
             </CardHeader>
 
             <CardContent className="pt-6">
-              <div className="">
-                {alert && (
-                  <AlertComponent
-                    message={alert}
-                    type="failure"
-                    onAlertClose={() => setAlert(null)}
-                  />
-                )}
-                {success && (
-                  <AlertComponent
-                    message={success}
-                    type="success"
-                    onAlertClose={() => setSuccess(null)}
-                  />
-                )}
-              </div>
               <div className="mb-8 grid gap-4 md:grid-cols-2">
                 {protocolOptions.map((option) => {
                   if (option.disabled) {
@@ -480,6 +464,25 @@ const CreateDid = (): React.JSX.Element => {
                 </div>
               </CardContent>
             </Card>
+          )}
+
+          {(alert || success) && (
+            <div className="space-y-2">
+              {alert && (
+                <AlertComponent
+                  message={alert}
+                  type="failure"
+                  onAlertClose={() => setAlert(null)}
+                />
+              )}
+              {success && (
+                <AlertComponent
+                  message={success}
+                  type="success"
+                  onAlertClose={() => setSuccess(null)}
+                />
+              )}
+            </div>
           )}
 
           {selectedDid && (
