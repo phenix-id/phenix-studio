@@ -5,7 +5,7 @@ import CredentialsProvider from 'next-auth/providers/credentials'
 import { JWT } from 'next-auth/jwt'
 import { Provider } from 'next-auth/providers/index'
 import { apiRoutes } from '@/config/apiRoutes'
-import { passwordValueEncryption } from '@/utils/passwordEncryption'
+import { passwordEncryption } from '@/app/api/server/encryption'
 
 type PasskeyUser = {
   userName: string
@@ -93,7 +93,7 @@ export const authOptions: MyAuthOptions = {
           if (isPassword) {
             sanitizedPayload = {
               email,
-              password: await passwordValueEncryption(password || ''),
+              password: passwordEncryption(JSON.stringify(password) || ''),
               isPasskey,
             }
           } else {
@@ -158,9 +158,6 @@ export const authOptions: MyAuthOptions = {
             return {
               id: user.data.session_state || user.data.email,
               sessionId: user.data.sessionId,
-              accessToken: user.data.access_token,
-              refreshToken: user.data.refresh_token,
-              expiresAt: user.data.expires_at,
             }
           }
 
@@ -179,9 +176,6 @@ export const authOptions: MyAuthOptions = {
     async jwt({ token, user }: { token: JWT; user?: User }): Promise<JWT> {
       if (user) {
         token.sessionId = user.sessionId
-        token.accessToken = user.accessToken
-        token.refreshToken = user.refreshToken
-        token.expiresAt = user.expiresAt
       }
       return token
     },
@@ -194,9 +188,6 @@ export const authOptions: MyAuthOptions = {
       token: JWT
     }): Promise<Session> {
       session.sessionId = token.sessionId as string
-      session.accessToken = token.accessToken as string
-      session.refreshToken = token.refreshToken as string
-      session.expiresAt = token.expiresAt as number
       return session
     },
 
