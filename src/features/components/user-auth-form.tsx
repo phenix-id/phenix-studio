@@ -84,10 +84,8 @@ export default function SignInViewPage(): React.JSX.Element {
         password: values.password || '',
         isPassword: isPasswordTab,
       }
-      const callbackUrl = redirectTo || '/dashboard'
       const response = await signIn('credentials', {
         ...entityData,
-        callbackUrl,
         redirect: false,
       })
       if (response?.error) {
@@ -107,8 +105,6 @@ export default function SignInViewPage(): React.JSX.Element {
         }
         setAlert(errorMsg)
         console.error('Sign in failed:', response.error)
-      } else if (response?.ok) {
-        route.push(response.url || callbackUrl)
       }
       setLoading(false)
     } catch (error) {
