@@ -7,6 +7,7 @@ import {
 import { signIn, useSession } from 'next-auth/react'
 import { useEffect, useRef, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
+import { AlertTriangle } from 'lucide-react'
 import { AxiosResponse } from 'axios'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
@@ -134,134 +135,154 @@ export function MarketplaceLanding(): React.JSX.Element {
 
   if (!marketplaceToken) {
     return (
-      <main className="mx-auto flex min-h-screen max-w-4xl flex-col justify-center gap-6 p-6">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-normal">
-            Marketplace token missing
-          </h1>
-          <p className="text-muted-foreground mt-2 text-sm">
-            Reopen Configure account or Manage account from Azure Portal or
-            Microsoft 365 Admin Center, then return to this landing page.
-          </p>
+      <div className="flex h-screen items-center justify-center overflow-y-auto bg-[image:var(--card-gradient)] p-6">
+        <div className="bg-card border-border w-full max-w-2xl overflow-hidden rounded-xl border shadow-xl">
+          <div className="flex flex-col gap-6 p-8">
+            <div className="flex items-start gap-3 rounded-lg border border-amber-500/40 bg-amber-500/10 p-4">
+              <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-amber-500" />
+              <div>
+                <p className="text-sm font-semibold text-amber-500">
+                  Marketplace token missing
+                </p>
+                <p className="mt-1 text-sm text-amber-500/80">
+                  Reopen Configure account or Manage account from Azure Portal
+                  or Microsoft 365 Admin Center, then return to this landing
+                  page.
+                </p>
+              </div>
+            </div>
+            <MarketplaceLegalInfo />
+          </div>
         </div>
-        <MarketplaceLegalInfo />
-      </main>
+      </div>
     )
   }
 
   if (status === 'unauthenticated') {
     return (
-      <main className="mx-auto flex min-h-screen max-w-4xl flex-col justify-center gap-6 p-6">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-normal">
-            Sign in to configure Phenix ID Platform
-          </h1>
-          <p className="text-muted-foreground mt-2 text-sm">
-            Continue with your organization account. The Marketplace purchase
-            token will be resolved by Platform after sign-in.
-          </p>
+      <div className="flex h-screen items-center justify-center overflow-y-auto bg-[image:var(--card-gradient)] p-6">
+        <div className="bg-card border-border w-full max-w-2xl overflow-hidden rounded-xl border shadow-xl">
+          <div className="flex flex-col gap-6 p-8">
+            <div>
+              <h1 className="text-2xl font-semibold tracking-normal">
+                Sign in to configure Phenix ID Platform
+              </h1>
+              <p className="text-muted-foreground mt-2 text-sm">
+                Continue with your organization account. The Marketplace
+                purchase token will be resolved by Platform after sign-in.
+              </p>
+            </div>
+            <MarketplaceLegalInfo />
+            <div className="flex items-start gap-3 rounded-lg border p-4">
+              <Checkbox
+                id="marketplace-legal-accept-sign-in"
+                checked={acceptedTerms}
+                onCheckedChange={(checked) =>
+                  handleTermsAcceptedChange(checked === true)
+                }
+              />
+              <Label
+                htmlFor="marketplace-legal-accept-sign-in"
+                className="text-sm leading-5 font-normal"
+              >
+                I have reviewed and accept the Privacy Policy, Terms of Use, and
+                support information for Phenix ID Platform.
+              </Label>
+            </div>
+            <Button
+              className="w-fit"
+              disabled={!acceptedTerms}
+              onClick={() =>
+                signIn(undefined, {
+                  callbackUrl: `${pathRoutes.marketplace.landing}?token=${encodeURIComponent(
+                    marketplaceToken,
+                  )}`,
+                })
+              }
+            >
+              Sign in
+            </Button>
+          </div>
         </div>
-        <MarketplaceLegalInfo />
-        <div className="flex items-start gap-3 rounded-lg border p-4">
-          <Checkbox
-            id="marketplace-legal-accept-sign-in"
-            checked={acceptedTerms}
-            onCheckedChange={(checked) =>
-              handleTermsAcceptedChange(checked === true)
-            }
-          />
-          <Label
-            htmlFor="marketplace-legal-accept-sign-in"
-            className="text-sm leading-5 font-normal"
-          >
-            I have reviewed and accept the Privacy Policy, Terms of Use, and
-            support information for Phenix ID Platform.
-          </Label>
-        </div>
-        <Button
-          className="w-fit"
-          disabled={!acceptedTerms}
-          onClick={() =>
-            signIn(undefined, {
-              callbackUrl: `${pathRoutes.marketplace.landing}?token=${encodeURIComponent(
-                marketplaceToken,
-              )}`,
-            })
-          }
-        >
-          Sign in
-        </Button>
-      </main>
+      </div>
     )
   }
 
   if (!readyToResolve) {
     return (
-      <main className="mx-auto flex min-h-screen max-w-4xl flex-col justify-center gap-6 p-6">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-normal">
-            Review Marketplace terms
-          </h1>
-          <p className="text-muted-foreground mt-2 text-sm">
-            Accept the required privacy, terms, and support information before
-            Studio links this Microsoft Marketplace purchase to your
-            organization.
-          </p>
+      <div className="flex h-screen items-center justify-center overflow-y-auto bg-[image:var(--card-gradient)] p-6">
+        <div className="bg-card border-border w-full max-w-2xl overflow-hidden rounded-xl border shadow-xl">
+          <div className="flex flex-col gap-6 p-8">
+            <div>
+              <h1 className="text-2xl font-semibold tracking-normal">
+                Review Marketplace terms
+              </h1>
+              <p className="text-muted-foreground mt-2 text-sm">
+                Accept the required privacy, terms, and support information
+                before Studio links this Microsoft Marketplace purchase to your
+                organization.
+              </p>
+            </div>
+            <MarketplaceLegalInfo />
+            <div className="flex items-start gap-3 rounded-lg border p-4">
+              <Checkbox
+                id="marketplace-legal-accept"
+                checked={acceptedTerms}
+                onCheckedChange={(checked) =>
+                  handleTermsAcceptedChange(checked === true)
+                }
+              />
+              <Label
+                htmlFor="marketplace-legal-accept"
+                className="text-sm leading-5 font-normal"
+              >
+                I have reviewed and accept the Privacy Policy, Terms of Use, and
+                support information for Phenix ID Platform.
+              </Label>
+            </div>
+            <Button
+              className="w-fit"
+              disabled={!acceptedTerms}
+              onClick={() => setReadyToResolve(true)}
+            >
+              Continue to Marketplace setup
+            </Button>
+          </div>
         </div>
-        <MarketplaceLegalInfo />
-        <div className="flex items-start gap-3 rounded-lg border p-4">
-          <Checkbox
-            id="marketplace-legal-accept"
-            checked={acceptedTerms}
-            onCheckedChange={(checked) =>
-              handleTermsAcceptedChange(checked === true)
-            }
-          />
-          <Label
-            htmlFor="marketplace-legal-accept"
-            className="text-sm leading-5 font-normal"
-          >
-            I have reviewed and accept the Privacy Policy, Terms of Use, and
-            support information for Phenix ID Platform.
-          </Label>
-        </div>
-        <Button
-          className="w-fit"
-          disabled={!acceptedTerms}
-          onClick={() => setReadyToResolve(true)}
-        >
-          Continue to Marketplace setup
-        </Button>
-      </main>
+      </div>
     )
   }
 
   return (
-    <main className="mx-auto flex min-h-screen max-w-4xl flex-col justify-center gap-6 p-6">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-normal">
-          Phenix ID Platform
-        </h1>
-        <p className="text-muted-foreground mt-2 text-sm">
-          Resolving your Microsoft Marketplace subscription and preparing
-          organization setup.
-        </p>
+    <div className="flex h-screen items-center justify-center overflow-y-auto bg-[image:var(--card-gradient)] p-6">
+      <div className="bg-card border-border w-full max-w-2xl overflow-hidden rounded-xl border shadow-xl">
+        <div className="flex flex-col gap-6 p-8">
+          <div>
+            <h1 className="text-2xl font-semibold tracking-normal">
+              Phenix ID Platform
+            </h1>
+            <p className="text-muted-foreground mt-2 text-sm">
+              Resolving your Microsoft Marketplace subscription and preparing
+              organization setup.
+            </p>
+          </div>
+          <MarketplaceLegalInfo />
+
+          {loading && (
+            <div className="text-muted-foreground rounded-md border p-4 text-sm">
+              Resolving Marketplace purchase...
+            </div>
+          )}
+
+          {error && (
+            <div className="border-destructive/30 bg-destructive/10 text-destructive rounded-md border p-4 text-sm">
+              {error}
+            </div>
+          )}
+
+          {resolved && <MarketplacePlanSummary subscription={resolved} />}
+        </div>
       </div>
-      <MarketplaceLegalInfo />
-
-      {loading && (
-        <div className="text-muted-foreground rounded-md border p-4 text-sm">
-          Resolving Marketplace purchase...
-        </div>
-      )}
-
-      {error && (
-        <div className="border-destructive/30 bg-destructive/10 text-destructive rounded-md border p-4 text-sm">
-          {error}
-        </div>
-      )}
-
-      {resolved && <MarketplacePlanSummary subscription={resolved} />}
-    </main>
+    </div>
   )
 }
