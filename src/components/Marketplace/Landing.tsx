@@ -54,8 +54,9 @@ export function MarketplaceLanding(): React.JSX.Element {
     resolved?.beneficiaryEmail || resolved?.purchaserEmail || ''
 
   const handleTermsAcceptedChange = (checked: boolean): void => {
+    // Only record acceptance here. Resolving the subscription is triggered explicitly
+    // by the "Continue" button (setReadyToResolve), not as a side effect of the checkbox.
     setAcceptedTerms(checked)
-    setReadyToResolve(checked)
 
     if (checked) {
       sessionStorage.setItem(MARKETPLACE_LEGAL_ACCEPTANCE_KEY, 'true')
@@ -66,10 +67,9 @@ export function MarketplaceLanding(): React.JSX.Element {
   }
 
   useEffect(() => {
-    const accepted =
-      sessionStorage.getItem(MARKETPLACE_LEGAL_ACCEPTANCE_KEY) === 'true'
-    setAcceptedTerms(accepted)
-    setReadyToResolve(accepted)
+    setAcceptedTerms(
+      sessionStorage.getItem(MARKETPLACE_LEGAL_ACCEPTANCE_KEY) === 'true',
+    )
   }, [])
 
   // Resolve the subscription as soon as terms are accepted — independent of auth, so the
@@ -169,88 +169,8 @@ export function MarketplaceLanding(): React.JSX.Element {
     )
   }
 
-  if (status === 'unauthenticated') {
-    return (
-      <div className="h-screen overflow-y-auto bg-[image:var(--card-gradient)] px-6 py-12">
-        <div className="bg-card border-border mx-auto w-full max-w-2xl overflow-hidden rounded-xl border shadow-xl">
-          <div className="flex flex-col gap-6 p-8">
-            <div>
-              <h1 className="text-2xl font-semibold tracking-normal">
-                Sign in to configure Phenix ID Platform
-              </h1>
-              <p className="text-muted-foreground mt-2 text-sm">
-                Continue with your organization account, or create a new one.
-                The Marketplace purchase token will be resolved by Platform once
-                you return here signed in.
-              </p>
-            </div>
-            <MarketplaceLegalInfo />
-            <div className="flex items-start gap-3 rounded-lg border p-4">
-              <Checkbox
-                id="marketplace-legal-accept-sign-in"
-                checked={acceptedTerms}
-                onCheckedChange={(checked) =>
-                  handleTermsAcceptedChange(checked === true)
-                }
-              />
-              <Label
-                htmlFor="marketplace-legal-accept-sign-in"
-                className="text-sm leading-5 font-normal"
-              >
-                I have reviewed and accept the Privacy Policy, Terms of Use, and
-                support information for Phenix ID Platform.
-              </Label>
-            </div>
-            {loading && (
-              <div className="text-muted-foreground rounded-md border p-4 text-sm">
-                Confirming your Microsoft Marketplace purchase...
-              </div>
-            )}
-            {error && (
-              <div className="border-destructive/30 bg-destructive/10 text-destructive rounded-md border p-4 text-sm">
-                {error}
-              </div>
-            )}
-            {resolved && <MarketplacePlanSummary subscription={resolved} />}
-            <div className="flex flex-wrap gap-3">
-              <Button
-                className="w-fit"
-                disabled={!acceptedTerms}
-                onClick={() =>
-                  router.push(
-                    `/sign-in?redirectTo=${encodeURIComponent(
-                      landingWithToken,
-                    )}&clientAlias=${encodeURIComponent(clientAlias)}`,
-                  )
-                }
-              >
-                Sign in
-              </Button>
-              <Button
-                variant="outline"
-                className="w-fit"
-                disabled={!acceptedTerms}
-                onClick={() =>
-                  router.push(
-                    `/sign-up?redirectTo=${encodeURIComponent(
-                      landingWithToken,
-                    )}&clientAlias=${encodeURIComponent(clientAlias)}${
-                      purchaserEmail
-                        ? `&email=${encodeURIComponent(purchaserEmail)}`
-                        : ''
-                    }`,
-                  )
-                }
-              >
-                Create account
-              </Button>
-            </div>
-          </div>
-        </div>
-      </div>
-    )
-  }
-
+  // Step 1 (both auth states): accept terms, then explicitly Continue. Continue is the
+  // only trigger that resolves the subscription — the checkbox alone does not.
   if (!readyToResolve) {
     return (
       <div className="h-screen overflow-y-auto bg-[image:var(--card-gradient)] px-6 py-12">
@@ -261,9 +181,9 @@ export function MarketplaceLanding(): React.JSX.Element {
                 Review Marketplace terms
               </h1>
               <p className="text-muted-foreground mt-2 text-sm">
-                Accept the required privacy, terms, and support information
-                before Studio links this Microsoft Marketplace purchase to your
-                organization.
+                Accept the required privacy, terms, and support information,
+                then continue to confirm your Microsoft Marketplace
+                subscription.
               </p>
             </div>
             <MarketplaceLegalInfo />
@@ -290,6 +210,74 @@ export function MarketplaceLanding(): React.JSX.Element {
             >
               Continue to Marketplace setup
             </Button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // Step 2 (unauthenticated): subscription resolved — show the plan, then let the buyer
+  // sign in or create an account. Buttons wait until the resolve completes so the
+  // purchaser email is available to pre-fill signup.
+  if (status === 'unauthenticated') {
+    return (
+      <div className="h-screen overflow-y-auto bg-[image:var(--card-gradient)] px-6 py-12">
+        <div className="bg-card border-border mx-auto w-full max-w-2xl overflow-hidden rounded-xl border shadow-xl">
+          <div className="flex flex-col gap-6 p-8">
+            <div>
+              <h1 className="text-2xl font-semibold tracking-normal">
+                Sign in to configure Phenix ID Platform
+              </h1>
+              <p className="text-muted-foreground mt-2 text-sm">
+                Continue with your organization account, or create a new one to
+                finish linking this Microsoft Marketplace subscription.
+              </p>
+            </div>
+            <MarketplaceLegalInfo />
+            {loading && (
+              <div className="text-muted-foreground rounded-md border p-4 text-sm">
+                Confirming your Microsoft Marketplace purchase...
+              </div>
+            )}
+            {error && (
+              <div className="border-destructive/30 bg-destructive/10 text-destructive rounded-md border p-4 text-sm">
+                {error}
+              </div>
+            )}
+            {resolved && <MarketplacePlanSummary subscription={resolved} />}
+            <div className="flex flex-wrap gap-3">
+              <Button
+                className="w-fit"
+                disabled={loading || !resolved}
+                onClick={() =>
+                  router.push(
+                    `/sign-in?redirectTo=${encodeURIComponent(
+                      landingWithToken,
+                    )}&clientAlias=${encodeURIComponent(clientAlias)}`,
+                  )
+                }
+              >
+                Sign in
+              </Button>
+              <Button
+                variant="outline"
+                className="w-fit"
+                disabled={loading || !resolved}
+                onClick={() =>
+                  router.push(
+                    `/sign-up?redirectTo=${encodeURIComponent(
+                      landingWithToken,
+                    )}&clientAlias=${encodeURIComponent(clientAlias)}${
+                      purchaserEmail
+                        ? `&email=${encodeURIComponent(purchaserEmail)}`
+                        : ''
+                    }`,
+                  )
+                }
+              >
+                Create account
+              </Button>
+            </div>
           </div>
         </div>
       </div>
