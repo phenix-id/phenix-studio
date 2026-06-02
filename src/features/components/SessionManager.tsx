@@ -122,13 +122,14 @@ export const SessionManager = ({
         if (!hasSessionTokens) {
           void logoutSession()
           return
-        } else if (redirectTo) {
-          const isOnRestrictedPage = preventRedirectOnPaths.some((page) =>
-            pathname.startsWith(page),
-          )
-          if (!isOnRestrictedPage) {
-            window.location.href = redirectTo
-          }
+        }
+        const isOnRestrictedPage = preventRedirectOnPaths.some((page) =>
+          pathname.startsWith(page),
+        )
+        if (redirectTo && !isOnRestrictedPage) {
+          window.location.href = redirectTo
+        } else if (!redirectTo && !isOnRestrictedPage) {
+          router.push('/dashboard')
         }
         setSessionReady(true)
       } else if (status === 'unauthenticated' || session === null) {
