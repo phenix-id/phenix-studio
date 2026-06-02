@@ -3,7 +3,7 @@
 import * as Yup from 'yup'
 
 import { Formik, Form as FormikForm } from 'formik'
-import React, { useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import { apiStatusCodes, emailRegex } from '@/config/CommonConstant'
 import { checkUserExist, sendVerificationMail } from '@/app/api/Auth'
 
@@ -17,17 +17,22 @@ interface StepEmailProps {
   readonly email: string
   readonly setEmail: (value: string) => void
   readonly goToNext: () => void
+  // When true the email is fixed (e.g. the Microsoft Marketplace purchaser email):
+  // the field is read-only and the verification mail is sent automatically on mount.
+  readonly locked?: boolean
 }
 
 export default function EmailVerificationForm({
   email,
   setEmail,
   goToNext,
+  locked = false,
 }: StepEmailProps): React.ReactElement {
   const [loading, setLoading] = useState(false)
   const [verifyLoader, setVerifyLoader] = useState(false)
   const [emailSuccess, setEmailSuccess] = useState<string | null>(null)
   const [addFailure, setAddFailure] = useState<string | null>(null)
+  const autoSentRef = useRef(false)
 
   const searchParams = useSearchParams()
   const clientAliasValue = searchParams?.get('clientAlias')
@@ -103,6 +108,16 @@ export default function EmailVerificationForm({
     }
   }
 
+  // For the marketplace path the email is the verified purchaser address; send the
+  // verification mail once on mount so the link is already waiting in their inbox.
+  useEffect(() => {
+    if (locked && email && !autoSentRef.current) {
+      autoSentRef.current = true
+      void handleSendVerificationEmail(email)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [locked, email])
+
   return (
     <Formik
       initialValues={{ email }}
@@ -158,6 +173,8 @@ export default function EmailVerificationForm({
                 value={values.email}
                 onChange={handleEmailChange}
                 onBlur={handleBlur}
+                readOnly={locked}
+                className={locked ? 'bg-muted cursor-not-allowed' : undefined}
               />
               {touched.email && errors.email && (
                 <div className="text-destructive mt-1 text-sm">

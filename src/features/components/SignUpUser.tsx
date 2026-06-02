@@ -5,6 +5,7 @@ import React, { useState } from 'react'
 import EmailVerificationForm from './EmailVerificationForm'
 import Footer from '@/components/Footer'
 import Link from 'next/link'
+import { SubscribeRequired } from '@/components/Marketplace/SubscribeRequired'
 import UserInfoForm from './UserInfoForm'
 import { useSearchParams } from 'next/navigation'
 
@@ -21,16 +22,35 @@ export default function SignUpUser(): React.JSX.Element {
       ? `/sign-in?redirectTo=${encodeURIComponent(redirectTo)}&clientAlias=${clientAlias}`
       : '/sign-in'
 
+  // Net-new buyers must subscribe on Microsoft first; the signup form is only shown
+  // when returning from the marketplace landing (redirectTo points back to it).
+  const cameFromMarketplace = (redirectTo ?? '').includes(
+    '/marketplace/landing',
+  )
+  const marketplaceRequired =
+    process.env.NEXT_PUBLIC_MARKETPLACE_REQUIRED === 'true'
+
+  if (marketplaceRequired && !cameFromMarketplace) {
+    return (
+      <SubscribeRequired
+        title="Subscribe to get started"
+        description="Phenix ID Platform is available through the Microsoft commercial marketplace. Subscribe on Microsoft to get started — after purchase you'll be brought back here to create your account."
+      />
+    )
+  }
+
   return (
     <div className="flex flex-col items-center justify-center">
-      {/* Subscription Message */}
-      <div className="mb-4 w-full max-w-md rounded-md border border-yellow-300 bg-yellow-50 p-4 text-yellow-800 dark:border-yellow-700 dark:bg-yellow-950 dark:text-yellow-300">
-        <p className="mt-1 text-sm">
-          You are registering using <strong>Free plan</strong> with limited
-          usage.
-          <span className="ml-1">Upgrade to avoid any interruptions.</span>
-        </p>
-      </div>
+      {/* Subscription Message — only relevant when there is a free tier */}
+      {!marketplaceRequired && (
+        <div className="mb-4 w-full max-w-md rounded-md border border-yellow-300 bg-yellow-50 p-4 text-yellow-800 dark:border-yellow-700 dark:bg-yellow-950 dark:text-yellow-300">
+          <p className="mt-1 text-sm">
+            You are registering using <strong>Free plan</strong> with limited
+            usage.
+            <span className="ml-1">Upgrade to avoid any interruptions.</span>
+          </p>
+        </div>
+      )}
       <div className="bg-card border-border relative z-10 h-full w-[480px] max-w-md overflow-hidden rounded-xl border p-8 shadow-xl transition-transform duration-300">
         <h2 className="mb-2 text-center text-xl font-semibold">
           Create an account
@@ -60,6 +80,7 @@ export default function SignUpUser(): React.JSX.Element {
             email={userEmail ?? ''}
             setEmail={setEmail}
             goToNext={() => setStep(2)}
+            locked={cameFromMarketplace && Boolean(userEmail)}
           />
         )}
 
