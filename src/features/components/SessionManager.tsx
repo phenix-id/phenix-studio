@@ -7,6 +7,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import Loader from '@/components/Loader'
 import { generateAccessToken } from '@/utils/session'
+import { safeInternalRedirect } from '@/utils/safeRedirect'
 import { useSession } from 'next-auth/react'
 
 const preventRedirectOnPaths = [
@@ -127,7 +128,8 @@ export const SessionManager = ({
           pathname.startsWith(page),
         )
         if (redirectTo && !isOnRestrictedPage) {
-          window.location.href = redirectTo
+          // Only follow same-origin relative paths to avoid open-redirects.
+          window.location.href = safeInternalRedirect(redirectTo)
         } else if (!redirectTo && !isOnRestrictedPage) {
           router.push('/dashboard')
         }
