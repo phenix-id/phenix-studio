@@ -37,6 +37,7 @@ import Loader from '@/components/Loader'
 import LogoUploader from './LogoUploader'
 import PageContainer from '@/components/layout/page-container'
 import Stepper from '@/components/StepperComponent'
+import { SubscribeRequired } from '@/components/Marketplace/SubscribeRequired'
 import { apiStatusCodes } from '@/config/CommonConstant'
 import { hardNavigate } from '@/utils/navigation'
 import { useAppDispatch } from '@/lib/hooks'
@@ -89,6 +90,15 @@ export default function OrganizationOnboarding(): React.JSX.Element {
   const redirectTo = searchParams.get('redirectTo')
   const clientAlias = searchParams.get('clientAlias')
   const dispatch = useAppDispatch()
+
+  // When the Marketplace is the only source of subscriptions, standalone org
+  // creation is gated: route the user to subscribe instead. Editing an existing
+  // org (orgId present) is always allowed. The backend guard is the hard enforcement.
+  const marketplaceRequired =
+    process.env.NEXT_PUBLIC_MARKETPLACE_REQUIRED === 'true'
+  const [subscriptionRequired, setSubscriptionRequired] = useState<boolean>(
+    marketplaceRequired && !orgId,
+  )
 
   const fetchOrganizationDetails = async (): Promise<void> => {
     setLoading(true)
@@ -317,7 +327,17 @@ export default function OrganizationOnboarding(): React.JSX.Element {
           hardNavigate(redirectUrl, true)
         }, 600)
       } else {
-        setFailure(resCreateOrg as string)
+        const message = resCreateOrg as string
+        // Backend enforces the subscription requirement even if the build-time
+        // flag is out of sync; surface the subscribe screen rather than a raw error.
+        if (
+          typeof message === 'string' &&
+          message.toLowerCase().includes('marketplace subscription')
+        ) {
+          setSubscriptionRequired(true)
+        } else {
+          setFailure(message)
+        }
       }
     } catch (error) {
       console.error('Error creating organization:', error)
@@ -325,6 +345,10 @@ export default function OrganizationOnboarding(): React.JSX.Element {
     } finally {
       setCreateLoading(false)
     }
+  }
+
+  if (subscriptionRequired) {
+    return <SubscribeRequired />
   }
 
   return (
