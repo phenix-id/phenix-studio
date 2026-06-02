@@ -4,7 +4,6 @@ import {
   ResolveMarketplaceResponse,
   resolveMarketplaceSubscription,
 } from '@/app/api/marketplace'
-import { signIn, useSession } from 'next-auth/react'
 import { useEffect, useRef, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { AlertTriangle } from 'lucide-react'
@@ -18,6 +17,7 @@ import { marketplaceLegal } from '@/config/marketplaceLegal'
 import { pathRoutes } from '@/config/pathRoutes'
 import { setOrgId } from '@/lib/orgSlice'
 import { useAppDispatch } from '@/lib/hooks'
+import { useSession } from 'next-auth/react'
 
 const ONBOARDING_SESSION_KEY = 'marketplaceOnboardingSessionId'
 const MARKETPLACE_LEGAL_ACCEPTANCE_KEY = `marketplaceLegalAccepted:${marketplaceLegal.lastUpdated}`
@@ -44,10 +44,18 @@ export function MarketplaceLanding(): React.JSX.Element {
   const [acceptedTerms, setAcceptedTerms] = useState(false)
   const [readyToResolve, setReadyToResolve] = useState(false)
   const resolveStarted = useRef(false)
+  const navigatedRef = useRef(false)
   const marketplaceToken = searchParams.get('token')
+  const clientAlias = process.env.NEXT_PUBLIC_PLATFORM_NAME || 'Phenix'
+  const landingWithToken = `${pathRoutes.marketplace.landing}?token=${encodeURIComponent(
+    marketplaceToken ?? '',
+  )}`
+  const purchaserEmail =
+    resolved?.beneficiaryEmail || resolved?.purchaserEmail || ''
 
   const handleTermsAcceptedChange = (checked: boolean): void => {
     setAcceptedTerms(checked)
+    setReadyToResolve(checked)
 
     if (checked) {
       sessionStorage.setItem(MARKETPLACE_LEGAL_ACCEPTANCE_KEY, 'true')
@@ -55,27 +63,26 @@ export function MarketplaceLanding(): React.JSX.Element {
     }
 
     sessionStorage.removeItem(MARKETPLACE_LEGAL_ACCEPTANCE_KEY)
-    setReadyToResolve(false)
   }
 
   useEffect(() => {
-    setAcceptedTerms(
-      sessionStorage.getItem(MARKETPLACE_LEGAL_ACCEPTANCE_KEY) === 'true',
-    )
+    const accepted =
+      sessionStorage.getItem(MARKETPLACE_LEGAL_ACCEPTANCE_KEY) === 'true'
+    setAcceptedTerms(accepted)
+    setReadyToResolve(accepted)
   }, [])
 
+  // Resolve the subscription as soon as terms are accepted — independent of auth, so the
+  // buyer confirms their purchase before signing in / creating an account. This never
+  // navigates (the wizard/billing pages are JWT-guarded); navigation is handled below.
   useEffect(() => {
     const resolveSubscription = async (): Promise<void> => {
       if (
         !marketplaceToken ||
-        status !== 'authenticated' ||
         !readyToResolve ||
-        !acceptedTerms
+        !acceptedTerms ||
+        resolveStarted.current
       ) {
-        return
-      }
-
-      if (resolveStarted.current) {
         return
       }
 
@@ -99,39 +106,43 @@ export function MarketplaceLanding(): React.JSX.Element {
             : 'Unable to resolve the Microsoft Marketplace subscription.',
         )
         setLoading(false)
+        resolveStarted.current = false
         return
       }
 
       sessionStorage.setItem(ONBOARDING_SESSION_KEY, data.onboardingSessionId)
       setResolved(data)
+      setLoading(false)
 
       if (data.linkedOrgId) {
         dispatch(setOrgId(data.linkedOrgId))
       }
-
-      if (
-        data.nextAction === 'open_dashboard' ||
-        data.nextAction === 'manage_billing'
-      ) {
-        router.push(pathRoutes.organizations.billing)
-        return
-      }
-
-      router.push(
-        `${pathRoutes.marketplace.onboarding}?sessionId=${data.onboardingSessionId}`,
-      )
     }
 
     resolveSubscription()
-  }, [
-    acceptedTerms,
-    dispatch,
-    marketplaceToken,
-    readyToResolve,
-    router,
-    session,
-    status,
-  ])
+  }, [acceptedTerms, dispatch, marketplaceToken, readyToResolve, session])
+
+  // Navigate to the JWT-guarded wizard/billing only once authenticated AND resolved.
+  // Kept separate from resolve so a resolve that completes while the session is still
+  // 'loading' still navigates correctly once auth settles.
+  useEffect(() => {
+    if (status !== 'authenticated' || !resolved || navigatedRef.current) {
+      return
+    }
+    navigatedRef.current = true
+
+    if (
+      resolved.nextAction === 'open_dashboard' ||
+      resolved.nextAction === 'manage_billing'
+    ) {
+      router.push(pathRoutes.organizations.billing)
+      return
+    }
+
+    router.push(
+      `${pathRoutes.marketplace.onboarding}?sessionId=${resolved.onboardingSessionId}`,
+    )
+  }, [status, resolved, router])
 
   if (!marketplaceToken) {
     return (
@@ -168,8 +179,9 @@ export function MarketplaceLanding(): React.JSX.Element {
                 Sign in to configure Phenix ID Platform
               </h1>
               <p className="text-muted-foreground mt-2 text-sm">
-                Continue with your organization account. The Marketplace
-                purchase token will be resolved by Platform after sign-in.
+                Continue with your organization account, or create a new one.
+                The Marketplace purchase token will be resolved by Platform once
+                you return here signed in.
               </p>
             </div>
             <MarketplaceLegalInfo />
@@ -189,19 +201,50 @@ export function MarketplaceLanding(): React.JSX.Element {
                 support information for Phenix ID Platform.
               </Label>
             </div>
-            <Button
-              className="w-fit"
-              disabled={!acceptedTerms}
-              onClick={() =>
-                signIn(undefined, {
-                  callbackUrl: `${pathRoutes.marketplace.landing}?token=${encodeURIComponent(
-                    marketplaceToken,
-                  )}`,
-                })
-              }
-            >
-              Sign in
-            </Button>
+            {loading && (
+              <div className="text-muted-foreground rounded-md border p-4 text-sm">
+                Confirming your Microsoft Marketplace purchase...
+              </div>
+            )}
+            {error && (
+              <div className="border-destructive/30 bg-destructive/10 text-destructive rounded-md border p-4 text-sm">
+                {error}
+              </div>
+            )}
+            {resolved && <MarketplacePlanSummary subscription={resolved} />}
+            <div className="flex flex-wrap gap-3">
+              <Button
+                className="w-fit"
+                disabled={!acceptedTerms}
+                onClick={() =>
+                  router.push(
+                    `/sign-in?redirectTo=${encodeURIComponent(
+                      landingWithToken,
+                    )}&clientAlias=${encodeURIComponent(clientAlias)}`,
+                  )
+                }
+              >
+                Sign in
+              </Button>
+              <Button
+                variant="outline"
+                className="w-fit"
+                disabled={!acceptedTerms}
+                onClick={() =>
+                  router.push(
+                    `/sign-up?redirectTo=${encodeURIComponent(
+                      landingWithToken,
+                    )}&clientAlias=${encodeURIComponent(clientAlias)}${
+                      purchaserEmail
+                        ? `&email=${encodeURIComponent(purchaserEmail)}`
+                        : ''
+                    }`,
+                  )
+                }
+              >
+                Create account
+              </Button>
+            </div>
           </div>
         </div>
       </div>
