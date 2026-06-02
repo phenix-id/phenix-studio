@@ -35,6 +35,7 @@ import { AxiosResponse } from 'axios'
 import { Button } from '@/components/ui/button'
 import { MarketplacePlanSummary } from './MarketplacePlanSummary'
 import { MarketplaceStatusBanner } from './MarketplaceStatusBanner'
+import PageContainer from '@/components/layout/page-container'
 import { UsageMeterTable } from './UsageMeterTable'
 import { useAppSelector } from '@/lib/hooks'
 
@@ -227,77 +228,79 @@ export function BillingOverview(): React.JSX.Element {
   }
 
   return (
-    <main className="space-y-6 p-4 sm:p-6">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-normal">
-            Organization billing
-          </h1>
-          <p className="text-muted-foreground text-sm">
-            {orgInfo?.name || 'Current organization'} subscription, usage, and
-            Microsoft Marketplace status.
-          </p>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <Button
-            variant="outline"
-            onClick={refreshSubscription}
-            disabled={loading || !entitlements?.subscription?.subscriptionId}
-          >
-            Refresh status
-          </Button>
-          {manageUrl && (
-            <Button asChild>
-              <a href={manageUrl} target="_blank" rel="noreferrer">
-                Manage in Microsoft
-              </a>
-            </Button>
-          )}
-        </div>
-      </div>
-
-      {error && (
-        <MarketplaceStatusBanner
-          subscriptionStatus={entitlements?.subscription?.status}
-          blockedReason={error}
-        />
-      )}
-
-      {!error && entitlements && (
-        <MarketplaceStatusBanner
-          subscriptionStatus={entitlements.subscription?.status}
-          blockedReason={entitlements.blockedReason}
-        />
-      )}
-
-      <MarketplacePlanSummary subscription={subscription || undefined} />
-
-      <MarketplacePricingCard />
-
-      <PlanLimitsCard limits={entitlements?.limits} />
-
-      <Card className="rounded-md">
-        <CardHeader>
-          <CardTitle>Usage and metering</CardTitle>
-          <CardDescription>
-            Microsoft invoices and payment methods stay in Microsoft
-            Marketplace. Studio only mirrors entitlement and usage status.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {loading && (
+    <PageContainer>
+      <main className="space-y-6">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h1 className="text-2xl font-semibold tracking-normal">
+              Organization billing
+            </h1>
             <p className="text-muted-foreground text-sm">
-              Loading billing usage...
+              {orgInfo?.name || 'Current organization'} subscription, usage, and
+              Microsoft Marketplace status.
             </p>
-          )}
-          {!loading && (
-            <UsageMeterTable
-              dimensions={usageSummary?.dimensions || []}
-              events={meteringEvents}
-            />
-          )}
-        </CardContent>
-      </Card>
-    </main>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              variant="outline"
+              onClick={refreshSubscription}
+              disabled={loading || !entitlements?.subscription?.subscriptionId}
+            >
+              Refresh status
+            </Button>
+            {manageUrl && (
+              <Button asChild>
+                <a href={manageUrl} target="_blank" rel="noreferrer">
+                  Manage in Microsoft
+                </a>
+              </Button>
+            )}
+          </div>
+        </div>
+
+        {error && (
+          <MarketplaceStatusBanner
+            subscriptionStatus={entitlements?.subscription?.status}
+            blockedReason={error}
+          />
+        )}
+
+        {!error && entitlements && (
+          <MarketplaceStatusBanner
+            subscriptionStatus={entitlements.subscription?.status}
+            blockedReason={entitlements.blockedReason}
+          />
+        )}
+
+        <MarketplacePlanSummary subscription={subscription || undefined} />
+
+        <MarketplacePricingCard />
+
+        <PlanLimitsCard limits={entitlements?.limits} />
+
+        <Card className="rounded-md">
+          <CardHeader>
+            <CardTitle>Usage and metering</CardTitle>
+            <CardDescription>
+              Microsoft invoices and payment methods stay in Microsoft
+              Marketplace. Studio only mirrors entitlement and usage status.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {loading && (
+              <p className="text-muted-foreground text-sm">
+                Loading billing usage...
+              </p>
+            )}
+            {!loading && (
+              <UsageMeterTable
+                dimensions={usageSummary?.dimensions || []}
+                events={meteringEvents}
+              />
+            )}
+          </CardContent>
+        </Card>
+      </main>
+    </PageContainer>
   )
 }
