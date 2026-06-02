@@ -31,13 +31,11 @@ import { setLedgerId } from '@/lib/orgSlice'
 const initialPageState = {
   pageNumber: 1,
   pageSize: 10,
-  total: 0,
 }
 
 export default function Dashboard(): React.JSX.Element {
   const [walletData, setWalletData] = useState<IOrgAgent[]>([])
   const [walletLoading, setWalletLoading] = useState(true)
-  const [currentPage, setCurrentPage] = useState(initialPageState)
   const [informativeMessage, setInformativeMessage] = useState<string | null>(
     '',
   )
@@ -56,14 +54,13 @@ export default function Dashboard(): React.JSX.Element {
   const getAllInvitations = useCallback(async (): Promise<void> => {
     try {
       const response = await getUserInvitations(
-        currentPage.pageNumber,
-        currentPage.pageSize,
+        initialPageState.pageNumber,
+        initialPageState.pageSize,
         '',
       )
       const { data } = response as AxiosResponse
 
       if (data?.statusCode === apiStatusCodes.API_STATUS_SUCCESS) {
-        const totalPages = data?.data?.totalPages
         const invitationList = data?.data?.invitations
         if (invitationList.length > 0) {
           setInformativeMessage(
@@ -71,18 +68,20 @@ export default function Dashboard(): React.JSX.Element {
           )
           setViewButton(true)
         }
-        setCurrentPage({ ...currentPage, total: totalPages })
       }
     } catch (err) {
       console.error('An unexpected error occurred', err)
     }
-  }, [currentPage])
+  }, [])
 
   const getAllEcosystemInvitations = useCallback(async (): Promise<void> => {
+    if (!orgId) {
+      return
+    }
     try {
       const response = await getUserEcosystemInvitations(
-        currentPage.pageNumber,
-        currentPage.pageSize,
+        initialPageState.pageNumber,
+        initialPageState.pageSize,
         '',
         orgId,
       )
@@ -97,14 +96,11 @@ export default function Dashboard(): React.JSX.Element {
           setEcoMessage('You have received invitation to join ecosystem ')
           setViewButton(true)
         }
-
-        const totalPages = data?.data?.totalPages
-        setCurrentPage({ ...currentPage, total: totalPages })
       }
     } catch (err) {
       console.error('An unexpected error occurred.', err)
     }
-  }, [currentPage, orgId])
+  }, [orgId])
 
   const getEcosystemEnableStatus = useCallback(async (): Promise<void> => {
     try {
@@ -148,10 +144,14 @@ export default function Dashboard(): React.JSX.Element {
   }, [orgId, dispatch])
 
   useEffect(() => {
-    getAllInvitations()
-    getAllEcosystemInvitations()
-    getEcosystemEnableStatus()
-  }, [getAllInvitations, getAllEcosystemInvitations, getEcosystemEnableStatus])
+    void getEcosystemEnableStatus()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  useEffect(() => {
+    void getAllInvitations()
+    void getAllEcosystemInvitations()
+  }, [getAllInvitations, getAllEcosystemInvitations])
 
   useEffect(() => {
     if (orgId) {
