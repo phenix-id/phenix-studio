@@ -30,6 +30,8 @@ const META_THEME_COLORS = {
 const SESSION_FALLBACK_DURATION_MS = 1000 * 60 * 30
 
 export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
   themeColor: META_THEME_COLORS.light,
 }
 

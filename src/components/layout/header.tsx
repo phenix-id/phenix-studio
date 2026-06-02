@@ -18,11 +18,14 @@ import { Organisation } from '@/features/dashboard/type/organization'
 import { SidebarTrigger } from '../ui/sidebar'
 import { UserNav } from './user-nav'
 import { getOrganizations } from '@/app/api/organization'
+import { pathRoutes } from '@/config/pathRoutes'
+import { useRouter } from 'next/navigation'
 
 const enableAppLauncher = process.env.NEXT_PUBLIC_ENABLE_APP_LAUNCHER === 'true'
 
 export default function Header(): React.JSX.Element {
   const dispatch = useAppDispatch()
+  const router = useRouter()
   const [orgList, setOrgList] = useState<Organisation[]>([])
   const tenantId = useAppSelector((state) => state.organization.orgId)
 
@@ -100,6 +103,7 @@ export default function Header(): React.JSX.Element {
             ) || [],
         }),
       )
+      router.push(pathRoutes.users.dashboard)
     }
   }
 

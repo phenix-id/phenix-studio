@@ -135,8 +135,8 @@ export function MarketplaceLanding(): React.JSX.Element {
 
   if (!marketplaceToken) {
     return (
-      <div className="flex h-screen items-center justify-center overflow-y-auto bg-[image:var(--card-gradient)] p-6">
-        <div className="bg-card border-border w-full max-w-2xl overflow-hidden rounded-xl border shadow-xl">
+      <div className="h-screen overflow-y-auto bg-[image:var(--card-gradient)] px-6 py-12">
+        <div className="bg-card border-border mx-auto w-full max-w-2xl overflow-hidden rounded-xl border shadow-xl">
           <div className="flex flex-col gap-6 p-8">
             <div className="flex items-start gap-3 rounded-lg border border-amber-500/40 bg-amber-500/10 p-4">
               <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-amber-500" />
@@ -160,8 +160,8 @@ export function MarketplaceLanding(): React.JSX.Element {
 
   if (status === 'unauthenticated') {
     return (
-      <div className="flex h-screen items-center justify-center overflow-y-auto bg-[image:var(--card-gradient)] p-6">
-        <div className="bg-card border-border w-full max-w-2xl overflow-hidden rounded-xl border shadow-xl">
+      <div className="h-screen overflow-y-auto bg-[image:var(--card-gradient)] px-6 py-12">
+        <div className="bg-card border-border mx-auto w-full max-w-2xl overflow-hidden rounded-xl border shadow-xl">
           <div className="flex flex-col gap-6 p-8">
             <div>
               <h1 className="text-2xl font-semibold tracking-normal">
@@ -210,8 +210,8 @@ export function MarketplaceLanding(): React.JSX.Element {
 
   if (!readyToResolve) {
     return (
-      <div className="flex h-screen items-center justify-center overflow-y-auto bg-[image:var(--card-gradient)] p-6">
-        <div className="bg-card border-border w-full max-w-2xl overflow-hidden rounded-xl border shadow-xl">
+      <div className="h-screen overflow-y-auto bg-[image:var(--card-gradient)] px-6 py-12">
+        <div className="bg-card border-border mx-auto w-full max-w-2xl overflow-hidden rounded-xl border shadow-xl">
           <div className="flex flex-col gap-6 p-8">
             <div>
               <h1 className="text-2xl font-semibold tracking-normal">

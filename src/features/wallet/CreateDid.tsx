@@ -296,9 +296,16 @@ const CreateDid = (): React.JSX.Element => {
 
                       <div className="mb-6">{option.icon}</div>
 
-                      <h3 className="text-foreground mb-1 font-semibold">
-                        {option.title}
-                      </h3>
+                      <div className="mb-1 flex items-center gap-2">
+                        <h3 className="text-foreground font-semibold">
+                          {option.title}
+                        </h3>
+                        {selectedProtocol === option.id && (
+                          <span className="bg-primary text-primary-foreground rounded-full px-2 py-0.5 text-xs font-medium">
+                            Selected
+                          </span>
+                        )}
+                      </div>
                       <p className="text-muted-foreground text-sm">
                         {option.desc}
                       </p>
@@ -351,9 +358,16 @@ const CreateDid = (): React.JSX.Element => {
                         >
                           <TooltipInfo text={option.tooltip} />
 
-                          <h3 className="text-foreground mb-1 font-semibold">
-                            {option.title}
-                          </h3>
+                          <div className="mb-1 flex items-center gap-2">
+                            <h3 className="text-foreground font-semibold">
+                              {option.title}
+                            </h3>
+                            {selectedOption === option.id && (
+                              <span className="bg-primary text-primary-foreground rounded-full px-2 py-0.5 text-xs font-medium">
+                                Selected
+                              </span>
+                            )}
+                          </div>
                           <p className="text-muted-foreground text-sm">
                             {option.desc}
                           </p>

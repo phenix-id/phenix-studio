@@ -105,8 +105,9 @@ export default function SignInViewPage(): React.JSX.Element {
         }
         setAlert(errorMsg)
         console.error('Sign in failed:', response.error)
+        setLoading(false)
       }
-      setLoading(false)
+      // On success: keep loading=true until SessionManager redirects and unmounts this component
     } catch (error) {
       setAlert('Something went wrong during sign in. Please try again.')
       setLoading(false)
@@ -239,8 +240,8 @@ export default function SignInViewPage(): React.JSX.Element {
         // eslint-disable-next-line no-console
         console.error('FIDO Authentication Error:', error)
       }
-    } finally {
       setLoading(false)
+      // On success: keep loading=true until route.push navigation completes
     }
   }
 
@@ -424,7 +425,11 @@ export default function SignInViewPage(): React.JSX.Element {
               className="w-full text-xs md:text-sm"
             >
               {loading && <Loader size={20} isExpand={false} />}
-              {isPasswordTab ? 'Sign in' : 'Continue with passkey'}
+              {loading
+                ? 'Signing in...'
+                : isPasswordTab
+                  ? 'Sign in'
+                  : 'Continue with passkey'}
             </Button>
 
             {process.env.NEXT_PUBLIC_ENABLE_SOCIAL_LOGIN?.toLowerCase() ===
