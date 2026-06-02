@@ -24,6 +24,7 @@ import Link from 'next/link'
 import Loader from '@/components/Loader'
 import { apiStatusCodes } from '@/config/CommonConstant'
 import { generateAuthenticationOption } from '@/app/api/Fido'
+import { safeInternalRedirect } from '@/utils/safeRedirect'
 import { setProfile } from '@/lib/profileSlice'
 import { signIn } from 'next-auth/react'
 import { startAuthentication } from '@simplewebauthn/browser'
@@ -222,10 +223,14 @@ export default function SignInViewPage(): React.JSX.Element {
           return
         }
 
-        route.push(
+        const defaultRoute =
           userRole?.role?.name === PlatformRoles.platformAdmin
             ? '/dashboard/settings'
-            : '/dashboard',
+            : '/dashboard'
+        route.push(
+          redirectTo
+            ? safeInternalRedirect(redirectTo, defaultRoute)
+            : defaultRoute,
         )
       } else if (verificationResp?.error) {
         console.error(verificationResp?.error)
