@@ -10,9 +10,16 @@ import { AxiosResponse } from 'axios'
 import { apiRoutes } from '@/config/apiRoutes'
 import { getHeaderConfigs } from '@/config/GetHeaderConfigs'
 
+export interface ApiErrorResult {
+  error: true
+  message: string
+  statusCode?: number
+  code?: string
+}
+
 export const createOrganization = async (
   data: object,
-): Promise<AxiosResponse | string> => {
+): Promise<AxiosResponse | ApiErrorResult> => {
   const url = apiRoutes.organizations.create
   const payload = data
 
@@ -27,8 +34,13 @@ export const createOrganization = async (
   try {
     return await axiosPost(axiosPayload)
   } catch (error) {
-    const err = error as Error
-    return err?.message
+    const err = error as Error & { statusCode?: number; code?: string }
+    return {
+      error: true,
+      message: err?.message ?? 'Something went wrong, please try later...',
+      statusCode: err?.statusCode,
+      code: err?.code,
+    }
   }
 }
 
