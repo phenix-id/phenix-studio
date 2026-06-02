@@ -12,6 +12,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import {
+  ApiErrorResult,
   createOrganization,
   getOrganizationById,
   updateOrganization,
@@ -327,16 +328,17 @@ export default function OrganizationOnboarding(): React.JSX.Element {
           hardNavigate(redirectUrl, true)
         }, 600)
       } else {
-        const message = resCreateOrg as string
-        // Backend enforces the subscription requirement even if the build-time
-        // flag is out of sync; surface the subscribe screen rather than a raw error.
+        const errResult = resCreateOrg as ApiErrorResult
+        // Backend enforces the subscription requirement even if the build-time flag is
+        // out of sync. Detect it via the error code / HTTP 403 (not message text, which
+        // is brittle) and surface the subscribe screen rather than a raw error.
         if (
-          typeof message === 'string' &&
-          message.toLowerCase().includes('marketplace subscription')
+          errResult?.code === 'marketplace_subscription_required' ||
+          errResult?.statusCode === 403
         ) {
           setSubscriptionRequired(true)
         } else {
-          setFailure(message)
+          setFailure(errResult?.message ?? 'Failed to create organization.')
         }
       }
     } catch (error) {
