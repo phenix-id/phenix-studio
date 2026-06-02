@@ -45,6 +45,7 @@ export function MarketplaceLanding(): React.JSX.Element {
   const [readyToResolve, setReadyToResolve] = useState(false)
   const resolveStarted = useRef(false)
   const navigatedRef = useRef(false)
+  const initiallyAcceptedRef = useRef(false)
   const marketplaceToken = searchParams.get('token')
   const clientAlias = process.env.NEXT_PUBLIC_PLATFORM_NAME || 'Phenix'
   const landingWithToken = `${pathRoutes.marketplace.landing}?token=${encodeURIComponent(
@@ -67,10 +68,21 @@ export function MarketplaceLanding(): React.JSX.Element {
   }
 
   useEffect(() => {
-    setAcceptedTerms(
-      sessionStorage.getItem(MARKETPLACE_LEGAL_ACCEPTANCE_KEY) === 'true',
-    )
+    const accepted =
+      sessionStorage.getItem(MARKETPLACE_LEGAL_ACCEPTANCE_KEY) === 'true'
+    initiallyAcceptedRef.current = accepted
+    setAcceptedTerms(accepted)
   }, [])
+
+  // A returning authenticated user who already accepted terms in a previous step (e.g.
+  // before signing up) skips the terms screen, avoiding a redundant second "Continue".
+  // Only applies to acceptance restored at mount — a fresh checkbox tick still requires
+  // an explicit Continue click (resolve is never a silent checkbox side effect).
+  useEffect(() => {
+    if (status === 'authenticated' && initiallyAcceptedRef.current) {
+      setReadyToResolve(true)
+    }
+  }, [status])
 
   // Resolve the subscription as soon as terms are accepted — independent of auth, so the
   // buyer confirms their purchase before signing in / creating an account. This never
