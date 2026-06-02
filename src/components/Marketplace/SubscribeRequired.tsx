@@ -78,5 +78,3 @@ export function SubscribeRequired({
     </PageContainer>
   )
 }
-
-export default SubscribeRequired

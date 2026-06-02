@@ -17,10 +17,18 @@ const HandleResponse = (
   responseData: AxiosResponse | undefined,
 ): Promise<AxiosResponse> => {
   if (responseData) {
+    const body = responseData.data as { message?: string; code?: string }
     const errorMessage =
-      (responseData.data as { message?: string })?.message ||
-      'Something went wrong, please try later...'
-    return Promise.reject(new Error(errorMessage))
+      body?.message || 'Something went wrong, please try later...'
+    // Attach the HTTP status and any backend error code so callers can branch on them
+    // instead of matching message text (which is brittle to wording changes).
+    const error = new Error(errorMessage) as Error & {
+      statusCode?: number
+      code?: string
+    }
+    error.statusCode = responseData.status
+    error.code = body?.code
+    return Promise.reject(error)
   }
   return Promise.reject(
     new Error('Please check your internet connectivity and try again'),
