@@ -1,4 +1,8 @@
-import { axiosGet, axiosPost } from '@/services/apiRequests'
+import {
+  axiosGet,
+  axiosPost,
+  axiosPublicUserPost,
+} from '@/services/apiRequests'
 
 import { AxiosResponse } from 'axios'
 import { apiRoutes } from '@/config/apiRoutes'
@@ -150,7 +154,7 @@ export const resolveMarketplaceSubscription = async (
   data: ResolveMarketplacePayload,
 ): Promise<AxiosResponse | string> => {
   try {
-    return await axiosPost({
+    return await axiosPublicUserPost({
       url: apiRoutes.Marketplace.resolve,
       payload: data,
     })
