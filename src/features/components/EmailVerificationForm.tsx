@@ -30,7 +30,7 @@ export default function EmailVerificationForm({
 }: StepEmailProps): React.ReactElement {
   const [loading, setLoading] = useState(false)
   const [verifyLoader, setVerifyLoader] = useState(false)
-  const [emailSuccess, setEmailSuccess] = useState<string | null>(null)
+  const [emailSent, setEmailSent] = useState(false)
   const [addFailure, setAddFailure] = useState<string | null>(null)
   const autoSentRef = useRef(false)
 
@@ -74,17 +74,15 @@ export default function EmailVerificationForm({
       const { data } = userRsp as AxiosResponse
 
       if (data?.statusCode === apiStatusCodes.API_STATUS_CREATED) {
-        setEmailSuccess(data?.message)
+        setEmailSent(true)
         setAddFailure(null)
       } else {
         setAddFailure(userRsp as string)
-        setEmailSuccess(null)
       }
     } catch (err) {
       // eslint-disable-next-line no-console
       console.error('Error during sending verification email:', err)
       setAddFailure('An error occurred while sending verification email.')
-      setEmailSuccess(null)
     } finally {
       setVerifyLoader(false)
     }
@@ -92,13 +90,13 @@ export default function EmailVerificationForm({
 
   const handleVerifyEmail = async (emailValue: string): Promise<void> => {
     setLoading(true)
-    setEmailSuccess(null)
     setAddFailure(null)
 
     try {
       const userRsp = await checkUserExist(emailValue)
       const { data } = userRsp as AxiosResponse
-      const { isEmailVerified, isRegistrationCompleted } = data?.data ?? {}
+      const { isEmailVerified, isRegistrationCompleted, userId } =
+        data?.data ?? {}
 
       if (data?.statusCode === apiStatusCodes.API_STATUS_SUCCESS) {
         if (isEmailVerified) {
@@ -115,7 +113,15 @@ export default function EmailVerificationForm({
             setEmail(emailValue)
             goToNext()
           }
+        } else if (userId) {
+          // A user record already exists but is unverified, so a verification link was
+          // already sent on a previous attempt. The backend refuses to send a second one
+          // (409), so don't re-POST — just show the "check your inbox" state. This is what
+          // caused the confusing "verification already sent" error when a buyer clicked
+          // "Continue with email" twice or returned to this step before verifying.
+          setEmailSent(true)
         } else {
+          // Brand-new address (no record yet): send the initial verification mail.
           await handleSendVerificationEmail(emailValue)
         }
       } else {
@@ -162,19 +168,6 @@ export default function EmailVerificationForm({
 
         return (
           <FormikForm className="space-y-4">
-            {emailSuccess && (
-              <div className="w-full" role="alert">
-                <AlertComponent
-                  message={emailSuccess}
-                  type={'success'}
-                  onAlertClose={() => {
-                    if (emailSuccess) {
-                      setEmailSuccess(null)
-                    }
-                  }}
-                />
-              </div>
-            )}
             {addFailure && (
               <div className="w-full" role="alert">
                 <AlertComponent
@@ -189,33 +182,69 @@ export default function EmailVerificationForm({
               </div>
             )}
 
-            <div className="h-12">
-              <Input
-                placeholder="Enter your email"
-                type="email"
-                name="email"
-                value={values.email}
-                onChange={handleEmailChange}
-                onBlur={handleBlur}
-                readOnly={locked}
-                className={locked ? 'bg-muted cursor-not-allowed' : undefined}
-              />
-              {touched.email && errors.email && (
-                <div className="text-destructive mt-1 text-sm">
-                  {errors.email}
+            {emailSent ? (
+              <div className="space-y-4">
+                <div className="rounded-md border p-4">
+                  <p className="font-medium">Check your inbox</p>
+                  <p className="text-muted-foreground mt-1 text-sm">
+                    We sent a verification link to{' '}
+                    <span className="text-foreground font-medium">
+                      {values.email}
+                    </span>
+                    . Open it to continue creating your account — this page
+                    reopens automatically when you return.
+                  </p>
+                  <p className="text-muted-foreground mt-2 text-xs">
+                    Don&apos;t see it? Check your spam folder.
+                  </p>
                 </div>
-              )}
-            </div>
+                {!locked && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full"
+                    onClick={() => {
+                      setEmailSent(false)
+                      setAddFailure(null)
+                    }}
+                  >
+                    Use a different email
+                  </Button>
+                )}
+              </div>
+            ) : (
+              <>
+                <div className="h-12">
+                  <Input
+                    placeholder="Enter your email"
+                    type="email"
+                    name="email"
+                    value={values.email}
+                    onChange={handleEmailChange}
+                    onBlur={handleBlur}
+                    readOnly={locked}
+                    className={
+                      locked ? 'bg-muted cursor-not-allowed' : undefined
+                    }
+                  />
+                  {touched.email && errors.email && (
+                    <div className="text-destructive mt-1 text-sm">
+                      {errors.email}
+                    </div>
+                  )}
+                </div>
 
-            <Button
-              type="submit"
-              className="mt-6 w-full"
-              disabled={loading || verifyLoader}
-            >
-              {loading || verifyLoader
-                ? 'Processing...'
-                : 'Continue with email'}
-            </Button>
+                <Button
+                  type="submit"
+                  className="mt-6 w-full"
+                  disabled={loading || verifyLoader}
+                >
+                  {loading || verifyLoader
+                    ? 'Processing...'
+                    : 'Continue with email'}
+                </Button>
+              </>
+            )}
           </FormikForm>
         )
       }}
