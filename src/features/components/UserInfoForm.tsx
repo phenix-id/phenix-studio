@@ -164,8 +164,12 @@ export default function UserInfoForm({
       const { data } = userRsp as AxiosResponse
 
       if (data?.statusCode === apiStatusCodes.API_STATUS_CREATED) {
+        // Preserve the marketplace redirectTo + clientAlias (mirroring the password path)
+        // so passkey sign-ups also land back on onboarding after authenticating.
         window.location.href =
-          '/sign-in?signup=true&fidoFlag=true&method=passkey'
+          redirectTo && clientAlias
+            ? `/sign-in?signup=true&email=${email}&redirectTo=${encodeURIComponent(redirectTo)}&clientAlias=${clientAlias}&fidoFlag=true&method=passkey`
+            : '/sign-in?signup=true&fidoFlag=true&method=passkey'
       } else {
         setFailure(data?.message || 'Passkey registration failed')
       }

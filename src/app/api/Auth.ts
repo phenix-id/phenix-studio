@@ -14,6 +14,9 @@ import { getHeaderConfigs } from '@/config/GetHeaderConfigs'
 export interface IUserSignUpData {
   email: string
   clientAlias?: string
+  // Relative return path baked into the verification email link so it survives the
+  // round-trip (e.g. the marketplace landing with its ?token=).
+  redirectTo?: string
 }
 export interface IAddPasswordDetails {
   email: string

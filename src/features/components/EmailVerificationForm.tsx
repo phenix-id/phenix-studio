@@ -6,12 +6,12 @@ import { Formik, Form as FormikForm } from 'formik'
 import React, { useEffect, useRef, useState } from 'react'
 import { apiStatusCodes, emailRegex } from '@/config/CommonConstant'
 import { checkUserExist, sendVerificationMail } from '@/app/api/Auth'
+import { useRouter, useSearchParams } from 'next/navigation'
 
 import { AlertComponent } from '@/components/AlertComponent'
 import { AxiosResponse } from 'axios'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { useSearchParams } from 'next/navigation'
 
 interface StepEmailProps {
   readonly email: string
@@ -34,8 +34,20 @@ export default function EmailVerificationForm({
   const [addFailure, setAddFailure] = useState<string | null>(null)
   const autoSentRef = useRef(false)
 
+  const router = useRouter()
   const searchParams = useSearchParams()
   const clientAliasValue = searchParams?.get('clientAlias')
+  const redirectTo = searchParams?.get('redirectTo')
+
+  // Send an existing/fully-registered account to sign-in (preserving the marketplace
+  // redirectTo + clientAlias) instead of dead-ending on an error or a redundant signup.
+  const redirectToSignIn = (emailValue: string): void => {
+    router.push(
+      redirectTo && clientAliasValue
+        ? `/sign-in?redirectTo=${encodeURIComponent(redirectTo)}&clientAlias=${clientAliasValue}&email=${encodeURIComponent(emailValue)}`
+        : `/sign-in?email=${encodeURIComponent(emailValue)}`,
+    )
+  }
 
   const validationSchema = Yup.object().shape({
     email: Yup.string()
@@ -53,6 +65,9 @@ export default function EmailVerificationForm({
         clientAlias: clientAliasValue
           ? clientAliasValue
           : process.env.NEXT_PUBLIC_PLATFORM_NAME,
+        // Pass the return path so the backend bakes it into the verification email link
+        // and the marketplace token survives the round-trip back to onboarding.
+        ...(redirectTo ? { redirectTo } : {}),
       }
 
       const userRsp = await sendVerificationMail(payload)
@@ -88,7 +103,14 @@ export default function EmailVerificationForm({
       if (data?.statusCode === apiStatusCodes.API_STATUS_SUCCESS) {
         if (isEmailVerified) {
           if (isRegistrationCompleted) {
-            setAddFailure(data?.data?.message)
+            // In the marketplace funnel, send an existing/complete account to sign-in
+            // (carrying the redirectTo) so they can continue onboarding. Outside that
+            // funnel, preserve the original inline "already exists" message.
+            if (redirectTo) {
+              redirectToSignIn(emailValue)
+            } else {
+              setAddFailure(data?.data?.message)
+            }
           } else {
             setEmail(emailValue)
             goToNext()
@@ -108,12 +130,14 @@ export default function EmailVerificationForm({
     }
   }
 
-  // For the marketplace path the email is the verified purchaser address; send the
-  // verification mail once on mount so the link is already waiting in their inbox.
+  // For the marketplace path the email is the fixed purchaser address. Resolve the right
+  // next step on mount instead of blindly sending a mail: an existing account → sign-in,
+  // an already-verified address (returning from the email link) → straight to step 2,
+  // and a brand-new address → send the verification mail so it is waiting in their inbox.
   useEffect(() => {
     if (locked && email && !autoSentRef.current) {
       autoSentRef.current = true
-      void handleSendVerificationEmail(email)
+      void handleVerifyEmail(email)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [locked, email])
