@@ -13,6 +13,8 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { Label } from '@/components/ui/label'
 import { MarketplaceLegalInfo } from './MarketplaceLegalInfo'
 import { MarketplacePlanSummary } from './MarketplacePlanSummary'
+import { apiStatusCodes } from '@/config/CommonConstant'
+import { checkUserExist } from '@/app/api/Auth'
 import { marketplaceLegal } from '@/config/marketplaceLegal'
 import { pathRoutes } from '@/config/pathRoutes'
 import { setOrgId } from '@/lib/orgSlice'
@@ -43,9 +45,15 @@ export function MarketplaceLanding(): React.JSX.Element {
   const [loading, setLoading] = useState(false)
   const [acceptedTerms, setAcceptedTerms] = useState(false)
   const [readyToResolve, setReadyToResolve] = useState(false)
+  // null = not yet known; once resolved we know whether the purchaser email already has a
+  // fully-registered Studio account, which decides whether the primary CTA is sign-in or
+  // create-account.
+  const [accountExists, setAccountExists] = useState<boolean | null>(null)
+  const [accountChecked, setAccountChecked] = useState(false)
   const resolveStarted = useRef(false)
   const navigatedRef = useRef(false)
   const initiallyAcceptedRef = useRef(false)
+  const accountCheckStarted = useRef(false)
   const marketplaceToken = searchParams.get('token')
   const clientAlias = process.env.NEXT_PUBLIC_PLATFORM_NAME || 'Phenix'
   const landingWithToken = `${pathRoutes.marketplace.landing}?token=${encodeURIComponent(
@@ -53,6 +61,20 @@ export function MarketplaceLanding(): React.JSX.Element {
   )}`
   const purchaserEmail =
     resolved?.beneficiaryEmail || resolved?.purchaserEmail || ''
+
+  const signInHref = (email?: string): string =>
+    `/sign-in?redirectTo=${encodeURIComponent(
+      landingWithToken,
+    )}&clientAlias=${encodeURIComponent(clientAlias)}${
+      email ? `&email=${encodeURIComponent(email)}` : ''
+    }`
+
+  const signUpHref = (email?: string): string =>
+    `/sign-up?redirectTo=${encodeURIComponent(
+      landingWithToken,
+    )}&clientAlias=${encodeURIComponent(clientAlias)}${
+      email ? `&email=${encodeURIComponent(email)}` : ''
+    }`
 
   const handleTermsAcceptedChange = (checked: boolean): void => {
     // Only record acceptance here. Resolving the subscription is triggered explicitly
@@ -133,6 +155,40 @@ export function MarketplaceLanding(): React.JSX.Element {
 
     resolveSubscription()
   }, [acceptedTerms, dispatch, marketplaceToken, readyToResolve, session])
+
+  // Once the purchaser email is known (and the buyer is unauthenticated), probe whether it
+  // already maps to a fully-registered account. This lets the single CTA point straight at
+  // sign-in or sign-up instead of forcing the buyer to choose. A failed/ambiguous check
+  // leaves accountExists null, which falls back to offering both paths.
+  useEffect(() => {
+    const checkAccount = async (): Promise<void> => {
+      if (
+        status !== 'unauthenticated' ||
+        !purchaserEmail ||
+        accountCheckStarted.current
+      ) {
+        return
+      }
+      accountCheckStarted.current = true
+
+      const response = await checkUserExist(purchaserEmail)
+      if (typeof response === 'string') {
+        setAccountExists(null)
+        setAccountChecked(true)
+        return
+      }
+
+      const { data } = response as AxiosResponse
+      const exists =
+        data?.statusCode === apiStatusCodes.API_STATUS_SUCCESS &&
+        Boolean(data?.data?.isEmailVerified) &&
+        Boolean(data?.data?.isRegistrationCompleted)
+      setAccountExists(exists)
+      setAccountChecked(true)
+    }
+
+    checkAccount()
+  }, [status, purchaserEmail])
 
   // Navigate to the JWT-guarded wizard/billing only once authenticated AND resolved.
   // Kept separate from resolve so a resolve that completes while the session is still
@@ -238,11 +294,14 @@ export function MarketplaceLanding(): React.JSX.Element {
           <div className="flex flex-col gap-6 p-8">
             <div>
               <h1 className="text-2xl font-semibold tracking-normal">
-                Sign in to configure Phenix ID Platform
+                Continue to Phenix ID Platform
               </h1>
               <p className="text-muted-foreground mt-2 text-sm">
-                Continue with your organization account, or create a new one to
-                finish linking this Microsoft Marketplace subscription.
+                {accountExists === true
+                  ? 'We found an account for your Marketplace purchase. Sign in to finish linking this subscription.'
+                  : accountExists === false
+                    ? 'Create your account to finish linking this Microsoft Marketplace subscription.'
+                    : 'Sign in or create an account to finish linking this Microsoft Marketplace subscription.'}
               </p>
             </div>
             <MarketplaceLegalInfo />
@@ -257,39 +316,68 @@ export function MarketplaceLanding(): React.JSX.Element {
               </div>
             )}
             {resolved && <MarketplacePlanSummary subscription={resolved} />}
-            <div className="flex flex-wrap gap-3">
-              <Button
-                className="w-fit"
-                disabled={loading || !resolved}
-                onClick={() =>
-                  router.push(
-                    `/sign-in?redirectTo=${encodeURIComponent(
-                      landingWithToken,
-                    )}&clientAlias=${encodeURIComponent(clientAlias)}`,
-                  )
-                }
-              >
-                Sign in
-              </Button>
-              <Button
-                variant="outline"
-                className="w-fit"
-                disabled={loading || !resolved}
-                onClick={() =>
-                  router.push(
-                    `/sign-up?redirectTo=${encodeURIComponent(
-                      landingWithToken,
-                    )}&clientAlias=${encodeURIComponent(clientAlias)}${
-                      purchaserEmail
-                        ? `&email=${encodeURIComponent(purchaserEmail)}`
-                        : ''
-                    }`,
-                  )
-                }
-              >
-                Create account
-              </Button>
-            </div>
+            {resolved &&
+              (purchaserEmail && !accountChecked ? (
+                <div className="text-muted-foreground rounded-md border p-4 text-sm">
+                  Checking your account...
+                </div>
+              ) : purchaserEmail && accountExists === true ? (
+                <div className="flex flex-col gap-3">
+                  <Button
+                    className="w-full"
+                    disabled={loading}
+                    onClick={() => router.push(signInHref(purchaserEmail))}
+                  >
+                    Continue as {purchaserEmail}
+                  </Button>
+                  <button
+                    type="button"
+                    className="text-muted-foreground hover:text-foreground self-start text-sm underline-offset-4 hover:underline"
+                    onClick={() => router.push(signInHref())}
+                  >
+                    Use a different account
+                  </button>
+                </div>
+              ) : purchaserEmail && accountExists === false ? (
+                <div className="flex flex-col gap-3">
+                  <Button
+                    className="w-full"
+                    disabled={loading}
+                    onClick={() => router.push(signUpHref(purchaserEmail))}
+                  >
+                    Create your account
+                  </Button>
+                  <button
+                    type="button"
+                    className="text-muted-foreground hover:text-foreground self-start text-sm underline-offset-4 hover:underline"
+                    onClick={() => router.push(signInHref(purchaserEmail))}
+                  >
+                    Already have an account? Sign in
+                  </button>
+                </div>
+              ) : (
+                <div className="flex flex-wrap gap-3">
+                  <Button
+                    className="w-fit"
+                    disabled={loading}
+                    onClick={() =>
+                      router.push(signInHref(purchaserEmail || undefined))
+                    }
+                  >
+                    Sign in
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className="w-fit"
+                    disabled={loading}
+                    onClick={() =>
+                      router.push(signUpHref(purchaserEmail || undefined))
+                    }
+                  >
+                    Create account
+                  </Button>
+                </div>
+              ))}
           </div>
         </div>
       </div>
