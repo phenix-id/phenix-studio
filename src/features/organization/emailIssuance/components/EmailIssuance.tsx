@@ -240,7 +240,6 @@ const EmailIssuance = (): JSX.Element => {
   return (
     <PageContainer>
       <div className="px-4 pt-2">
-        <BackButton />
         <div>
           {(success || failure) && (
             <AlertComponent
@@ -256,16 +255,19 @@ const EmailIssuance = (): JSX.Element => {
             <div>
               <p className="text-2xl font-semibold dark:text-white">Email</p>
             </div>
-            <RoleViewButton
-              buttonTitle={createSchemaTitle.title}
-              feature={Features.CRETAE_SCHEMA}
-              svgComponent={<div></div>}
-              onClickEvent={() => {
-                setEmailLoading(true)
-                router.push(`${pathRoutes.organizations.schemas}`)
-              }}
-              loading={emailLoading}
-            />
+            <div className="flex items-center gap-2">
+              <BackButton />
+              <RoleViewButton
+                buttonTitle={createSchemaTitle.title}
+                feature={Features.CRETAE_SCHEMA}
+                svgComponent={<div></div>}
+                onClickEvent={() => {
+                  setEmailLoading(true)
+                  router.push(`${pathRoutes.organizations.schemas}`)
+                }}
+                loading={emailLoading}
+              />
+            </div>
           </div>
           <div className="email-bulk-issuance flex flex-col justify-between gap-4">
             <EmailIssuanceCard
