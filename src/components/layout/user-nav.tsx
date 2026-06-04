@@ -17,10 +17,10 @@ import { Button } from '@/components/ui/button'
 import { IUserProfile } from '../profile/interfaces'
 import { apiRoutes } from '@/config/apiRoutes'
 import { apiStatusCodes } from '@/config/CommonConstant'
-import { generateAccessToken } from '@/utils/session'
 import { getUserProfile } from '@/app/api/Auth'
 import { hardNavigate } from '@/utils/navigation'
 import { pathRoutes } from '@/config/pathRoutes'
+import { persistor } from '@/lib/store'
 import { setUserProfileDetails } from '@/lib/userSlice'
 import { signOut } from 'next-auth/react'
 import { useAppSelector } from '@/lib/hooks'
@@ -60,45 +60,47 @@ export function UserNav(): React.JSX.Element | null {
     return null
   }
 
-  const logoutUser = async (): Promise<void> => {
-    const rootKey = 'persist:root'
-    const payload = {
-      sessions: [sessionId],
-    }
-
-    const response = await fetch(
-      `${process.env.NEXT_PUBLIC_BASE_URL}${apiRoutes.auth.signOut}`,
-      {
-        method: 'POST',
-        body: JSON.stringify(payload),
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-      },
-    )
-
-    if (response.status === apiStatusCodes.API_STATUS_UNAUTHORIZED) {
-      console.error('Logout API failed ')
-      await generateAccessToken()
-    } else {
-      if (localStorage.getItem(rootKey)) {
-        localStorage.removeItem(rootKey)
-
-        const interval = setInterval(() => {
-          if (!localStorage.getItem(rootKey)) {
-            clearInterval(interval)
-            signOut({ callbackUrl: '/sign-in' })
-          }
-        }, 100)
-      } else {
-        signOut({ callbackUrl: '/sign-in' })
-      }
-    }
-  }
-
   const handleLogout = async (): Promise<void> => {
-    logoutUser()
+    // 1. Best-effort backend session invalidation.
+    //    We proceed with local logout regardless of the response — a failed
+    //    API call (e.g. expired token, network error) must never block sign-out.
+    try {
+      await fetch(
+        `${process.env.NEXT_PUBLIC_BASE_URL}${apiRoutes.auth.signOut}`,
+        {
+          method: 'POST',
+          body: JSON.stringify({ sessions: [sessionId] }),
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+        },
+      )
+    } catch {
+      // Backend logout failed — continue with local logout
+    }
+
+    // 2. Wipe persisted Redux state so the next page load starts clean.
+    //    removeItem is synchronous; purge() flushes redux-persist's write queue.
+    localStorage.removeItem('persist:root')
+    await persistor.purge()
+
+    // 3. Clear the NextAuth session cookie (server-side) without relying on
+    //    NextAuth's redirect callback to navigate us. redirect:false means
+    //    NextAuth invalidates the cookie and returns — we drive navigation.
+    try {
+      await signOut({ redirect: false })
+    } catch {
+      // If NextAuth signOut fails, still force-navigate below
+    }
+
+    // 4. Hard navigate — bypasses SPA routing entirely so no React component
+    //    re-renders between now and the sign-in page appearing.
+    //    IMPORTANT: do NOT dispatch any Redux actions before this point.
+    //    Any state mutation here re-renders the still-mounted page, causing
+    //    the visible "dashboard with no tokens" flash. Redux state is destroyed
+    //    automatically when the page reloads, so no manual cleanup is needed.
+    window.location.href = '/sign-in'
   }
 
   return (

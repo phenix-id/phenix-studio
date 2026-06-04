@@ -7,28 +7,30 @@ import { store } from '@/lib/store'
 let refreshPromise: Promise<boolean> | null = null
 
 export async function logoutUser(): Promise<void> {
-  const rootKey = 'persist:root'
-  const searchParam =
-    typeof window !== 'undefined'
-      ? new URLSearchParams(window.location.search)
-      : new URLSearchParams()
+  if (typeof window === 'undefined') {
+    return
+  }
+
+  const searchParam = new URLSearchParams(window.location.search)
   const redirectTo = searchParam.get('redirectTo')
-  const callbackUrl = redirectTo
+  const signInUrl = redirectTo
     ? `/sign-in?redirectTo=${encodeURIComponent(redirectTo)}`
     : '/sign-in'
 
-  if (localStorage.getItem(rootKey)) {
-    localStorage.removeItem(rootKey)
+  // localStorage.removeItem is synchronous — no interval needed.
+  localStorage.removeItem('persist:root')
 
-    const interval = setInterval(() => {
-      if (!localStorage.getItem(rootKey)) {
-        clearInterval(interval)
-        signOut({ callbackUrl })
-      }
-    }, 100)
-  } else {
-    signOut({ callbackUrl })
+  // Clear the NextAuth session cookie then hard-navigate.
+  // redirect:false prevents NextAuth from driving navigation so we can do it
+  // ourselves with window.location.href — a guaranteed hard reload that bypasses
+  // SPA routing and avoids any React re-render on the current page.
+  try {
+    await signOut({ redirect: false })
+  } catch {
+    // If NextAuth signOut fails, still force-navigate
   }
+
+  window.location.href = signInUrl
 }
 
 export const generateAccessToken = async (): Promise<boolean> => {
