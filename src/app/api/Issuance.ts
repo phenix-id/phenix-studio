@@ -59,6 +59,46 @@ export const getIssuedCredentials = async ({
   }
 }
 
+export const issueOobQrCredential = async (
+  data: object,
+  credentialType: CredentialType | SchemaType,
+  orgId: string,
+): Promise<string | AxiosResponse> => {
+  const url = `${apiRoutes.organizations.root}/${orgId}${apiRoutes.Issuance.issueOobQrCredential}?credentialType=${credentialType}`
+
+  const axiosPayload = {
+    url,
+    payload: data,
+    config: getHeaderConfigs(),
+  }
+
+  try {
+    return await axiosPost(axiosPayload)
+  } catch (error) {
+    const err = error as Error
+    return err?.message
+  }
+}
+
+export const getCredentialById = async (
+  credentialExchangeId: string,
+  orgId: string,
+): Promise<string | AxiosResponse> => {
+  const url = `${apiRoutes.organizations.root}/${orgId}${apiRoutes.Issuance.getIssuedCredentials}/${credentialExchangeId}`
+
+  const axiosPayload = {
+    url,
+    config: getHeaderConfigs(),
+  }
+
+  try {
+    return await axiosGet(axiosPayload)
+  } catch (error) {
+    const err = error as Error
+    return err?.message
+  }
+}
+
 export const issueOobEmailCredential = async (
   data: object | string,
   credentialType: CredentialType,

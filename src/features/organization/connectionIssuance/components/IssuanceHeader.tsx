@@ -21,11 +21,34 @@ function IssuanceHeader({
   const router = useRouter()
   return (
     <div className="col-span-full mb-4 xl:mb-2">
-      <div className="flex items-center justify-end px-4">
-        <Button onClick={handleBackClick} disabled={isLoading}>
-          {isLoading ? <Loader size={20} /> : <ArrowLeft />}
-          Back
-        </Button>
+      <div className="flex items-center justify-between px-4 pr-5">
+        <h1 className="ml-1 text-xl font-semibold sm:text-2xl">Issuance</h1>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleBackClick}
+            disabled={isLoading}
+          >
+            {isLoading ? (
+              <Loader size={20} />
+            ) : (
+              <ArrowLeft className="h-4 w-4" />
+            )}
+            Back
+          </Button>
+          <Button
+            size="sm"
+            onClick={() => {
+              setCreateLoading(true)
+              router.push(pathRoutes.organizations.schemas)
+            }}
+            disabled={createLoading}
+          >
+            {createLoading && <Loader size={20} />}
+            View Schemas
+          </Button>
+        </div>
       </div>
       <AlertComponent
         message={success ?? error}
@@ -35,20 +58,6 @@ function IssuanceHeader({
           setSuccess(null)
         }}
       />
-      <div className="flex justify-between pt-2 pr-5">
-        <h1 className="ml-1 text-xl font-semibold sm:text-2xl">Issuance</h1>
-        <Button
-          onClick={() => {
-            setCreateLoading(true)
-            router.push(pathRoutes.organizations.schemas)
-          }}
-          disabled={createLoading}
-          className=""
-        >
-          {createLoading && <Loader size={20} />}
-          View Schemas
-        </Button>
-      </div>
     </div>
   )
 }

@@ -16,13 +16,14 @@ export const BackButton = (): JSX.Element => {
   }
 
   return (
-    <div className="col-span-full mb-3">
-      <div className="flex items-center justify-end">
-        <Button onClick={handleClick} disabled={isLoading}>
-          {isLoading ? <Loader size={20} /> : <ArrowLeft />}
-          Back
-        </Button>
-      </div>
-    </div>
+    <Button
+      variant="outline"
+      size="sm"
+      onClick={handleClick}
+      disabled={isLoading}
+    >
+      {isLoading ? <Loader size={20} /> : <ArrowLeft className="h-4 w-4" />}
+      Back
+    </Button>
   )
 }

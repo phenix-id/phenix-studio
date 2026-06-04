@@ -76,6 +76,7 @@ export const apiRoutes = {
     presentationVerification: '/proofs',
     proofRequestAttributesVerification: '/verified-proofs',
     verificationCredDef: '/verifiation/cred-defs',
+    getProofById: '/proofs',
   },
 
   organizations: {
@@ -117,6 +118,7 @@ export const apiRoutes = {
     getAllConnections: '/connections',
     issueCredential: '/credentials/offer',
     issueOobEmailCredential: '/credentials/oob/email',
+    issueOobQrCredential: '/credentials/oob/offer',
     bulk: {
       credefList: '/credentials/bulk/template',
       uploadCsv: '/bulk/upload',
