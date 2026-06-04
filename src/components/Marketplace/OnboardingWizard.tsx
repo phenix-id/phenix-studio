@@ -8,7 +8,7 @@ import {
   getMarketplaceOnboardingSession,
   linkMarketplaceAccount,
 } from '@/app/api/marketplace'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { AxiosResponse } from 'axios'
 import { Button } from '@/components/ui/button'
@@ -16,7 +16,6 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { MarketplacePlanSummary } from './MarketplacePlanSummary'
 import { Textarea } from '@/components/ui/textarea'
-import { cn } from '@/lib/utils'
 import { pathRoutes } from '@/config/pathRoutes'
 import { setOrgId } from '@/lib/orgSlice'
 import { useAppDispatch } from '@/lib/hooks'
@@ -37,41 +36,6 @@ function extractData<T>(response: AxiosResponse | string): T | null {
   return envelope.data || null
 }
 
-interface StepBadgeProps {
-  step: number
-  completed: boolean
-  active: boolean
-}
-
-function StepBadge({
-  step,
-  completed,
-  active,
-}: StepBadgeProps): React.JSX.Element {
-  return (
-    <div
-      className={cn(
-        'flex h-9 w-9 shrink-0 items-center justify-center rounded-full border-2 text-sm font-semibold transition-all duration-200',
-        completed && 'border-green-500 bg-green-500/10',
-        active && !completed && 'border-primary bg-primary/10',
-        !active && !completed && 'border-border bg-muted',
-      )}
-    >
-      {completed ? (
-        <CheckCircle2 className="h-4 w-4 text-green-500" />
-      ) : (
-        <span
-          className={cn(
-            active && !completed ? 'text-primary' : 'text-muted-foreground',
-          )}
-        >
-          {step}
-        </span>
-      )}
-    </div>
-  )
-}
-
 export function OnboardingWizard(): React.JSX.Element {
   const searchParams = useSearchParams()
   const router = useRouter()
@@ -86,6 +50,7 @@ export function OnboardingWizard(): React.JSX.Element {
   const [accountLinked, setAccountLinked] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const autoLinkRef = useRef(false)
 
   const sessionId =
     searchParams.get('sessionId') ||
@@ -99,7 +64,6 @@ export function OnboardingWizard(): React.JSX.Element {
       return
     }
 
-    setLoading(true)
     const response = await getMarketplaceOnboardingSession(sessionId)
     const data = extractData<MarketplaceOnboardingSession>(response)
 
@@ -109,11 +73,14 @@ export function OnboardingWizard(): React.JSX.Element {
           ? response
           : 'Unable to load Marketplace onboarding session.',
       )
-      setLoading(false)
       return
     }
 
     setSessionState(data)
+    // The backend's nextAction is the source of truth: anything past link_account means the
+    // signed-in account is already linked to this subscription.
+    setAccountLinked(data.nextAction !== 'link_account')
+
     const linkedOrgId =
       data.linkedOrgId || data.subscription.linkedOrgId || undefined
 
@@ -121,37 +88,47 @@ export function OnboardingWizard(): React.JSX.Element {
       setLocalOrgId(linkedOrgId)
       dispatch(setOrgId(linkedOrgId))
     }
-
-    setLoading(false)
   }, [dispatch, sessionId])
 
   useEffect(() => {
     loadSession()
   }, [loadSession])
 
-  const linkAccount = async (): Promise<void> => {
-    if (!sessionId) {
-      return
+  // Linking the signed-in account to the subscription needs no buyer input, so do it
+  // automatically once the session says it's the next step — there is no "Link account"
+  // button. autoLinkRef guards against re-firing when loadSession refreshes sessionState.
+  useEffect(() => {
+    const autoLink = async (): Promise<void> => {
+      if (
+        !sessionId ||
+        !sessionState ||
+        sessionState.nextAction !== 'link_account' ||
+        autoLinkRef.current
+      ) {
+        return
+      }
+      autoLinkRef.current = true
+      setError(null)
+
+      const response = await linkMarketplaceAccount(sessionId, {
+        mode: 'existing_user',
+        email: session?.user?.email || undefined,
+      })
+
+      if (typeof response === 'string') {
+        setError(response)
+        autoLinkRef.current = false
+        return
+      }
+
+      setAccountLinked(true)
+      await loadSession()
     }
 
-    setLoading(true)
-    setError(null)
-    const response = await linkMarketplaceAccount(sessionId, {
-      mode: 'existing_user',
-      email: session?.user?.email || undefined,
-    })
+    autoLink()
+  }, [sessionId, sessionState, session, loadSession])
 
-    if (typeof response === 'string') {
-      setError(response)
-      setLoading(false)
-      return
-    }
-
-    setAccountLinked(true)
-    await loadSession()
-  }
-
-  const createOrganization = async (): Promise<void> => {
+  const createOrganizationAndActivate = async (): Promise<void> => {
     if (!sessionId || !orgName.trim()) {
       setError('Organization name is required.')
       return
@@ -159,7 +136,8 @@ export function OnboardingWizard(): React.JSX.Element {
 
     setLoading(true)
     setError(null)
-    const response = await createMarketplaceOrganization(sessionId, {
+
+    const createResponse = await createMarketplaceOrganization(sessionId, {
       mode: 'create',
       organization: {
         name: orgName.trim(),
@@ -167,13 +145,13 @@ export function OnboardingWizard(): React.JSX.Element {
         website: orgWebsite.trim() || undefined,
       },
     })
-    const data = extractData<OrganizationLinkResponse>(response)
-    const linkedOrgId = data?.orgId || data?.organizationId
+    const created = extractData<OrganizationLinkResponse>(createResponse)
+    const linkedOrgId = created?.orgId || created?.organizationId
 
     if (!linkedOrgId) {
       setError(
-        typeof response === 'string'
-          ? response
+        typeof createResponse === 'string'
+          ? createResponse
           : 'Organization was not linked to the Marketplace subscription.',
       )
       setLoading(false)
@@ -182,12 +160,25 @@ export function OnboardingWizard(): React.JSX.Element {
 
     setLocalOrgId(linkedOrgId)
     dispatch(setOrgId(linkedOrgId))
-    await loadSession()
+
+    const activateResponse = await activateMarketplaceSubscription(
+      sessionId,
+      linkedOrgId,
+    )
+
+    if (typeof activateResponse === 'string') {
+      // Org is created/linked; only activation failed. Surface the error — the org now
+      // exists, so the UI falls back to the activate-only path for a retry.
+      setError(activateResponse)
+      setLoading(false)
+      return
+    }
+
+    router.push(pathRoutes.marketplace.success)
   }
 
-  const activate = async (): Promise<void> => {
+  const activateExistingOrganization = async (): Promise<void> => {
     if (!sessionId || !orgId) {
-      setError('Create or link an organization before activation.')
       return
     }
 
@@ -204,20 +195,17 @@ export function OnboardingWizard(): React.JSX.Element {
     router.push(pathRoutes.marketplace.success)
   }
 
-  const step2Active = accountLinked || Boolean(orgId)
-  const step3Active = Boolean(orgId)
-
   return (
     <div className="h-screen overflow-y-auto bg-[image:var(--card-gradient)]">
       <div className="mx-auto max-w-2xl space-y-4 px-4 py-8 sm:px-6">
         {/* Page header */}
         <div>
           <h1 className="text-2xl font-semibold tracking-normal">
-            Marketplace onboarding
+            Finish Marketplace setup
           </h1>
           <p className="text-muted-foreground mt-1 text-sm">
-            Link your account, create the buyer organization, then activate the
-            Microsoft Marketplace subscription.
+            Name your organization to finish linking and activate your Microsoft
+            Marketplace subscription.
           </p>
         </div>
 
@@ -232,260 +220,137 @@ export function OnboardingWizard(): React.JSX.Element {
         {/* Subscription summary */}
         <MarketplacePlanSummary subscription={sessionState?.subscription} />
 
-        {/* Step progress tracker */}
-        <div className="flex items-center gap-2 py-1">
-          <div className="flex flex-col items-center gap-1">
-            <div
-              className={cn(
-                'flex h-7 w-7 items-center justify-center rounded-full text-xs font-semibold transition-all',
-                accountLinked
-                  ? 'bg-green-500 text-white'
-                  : 'bg-primary text-white',
-              )}
-            >
-              {accountLinked ? '✓' : '1'}
-            </div>
-            <span className="text-muted-foreground hidden text-[11px] sm:block">
-              Account
-            </span>
-          </div>
-
-          <div
-            className={cn(
-              'mb-4 h-px flex-1 transition-colors sm:mb-0',
-              accountLinked ? 'bg-green-500' : 'bg-border',
-            )}
-          />
-
-          <div className="flex flex-col items-center gap-1">
-            <div
-              className={cn(
-                'flex h-7 w-7 items-center justify-center rounded-full text-xs font-semibold transition-all',
-                orgId
-                  ? 'bg-green-500 text-white'
-                  : step2Active
-                    ? 'bg-primary text-white'
-                    : 'bg-muted text-muted-foreground',
-              )}
-            >
-              {orgId ? '✓' : '2'}
-            </div>
-            <span className="text-muted-foreground hidden text-[11px] sm:block">
-              Organization
-            </span>
-          </div>
-
-          <div
-            className={cn(
-              'mb-4 h-px flex-1 transition-colors sm:mb-0',
-              orgId ? 'bg-green-500' : 'bg-border',
-            )}
-          />
-
-          <div className="flex flex-col items-center gap-1">
-            <div
-              className={cn(
-                'flex h-7 w-7 items-center justify-center rounded-full text-xs font-semibold transition-all',
-                step3Active
-                  ? 'bg-primary text-white'
-                  : 'bg-muted text-muted-foreground',
-              )}
-            >
-              3
-            </div>
-            <span className="text-muted-foreground hidden text-[11px] sm:block">
-              Activate
-            </span>
-          </div>
-        </div>
-
-        {/* ── Step 1: Account ── */}
-        <div
-          className={cn(
-            'bg-card border-border rounded-xl border p-5 shadow-sm transition-all',
-            accountLinked && 'border-green-500/25',
-          )}
-        >
-          <div className="flex items-start gap-4">
-            <StepBadge step={1} completed={accountLinked} active={true} />
-            <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-2">
-                <p
-                  className={cn(
-                    'font-semibold',
-                    accountLinked && 'text-green-500',
-                  )}
-                >
-                  Account
-                </p>
-                {accountLinked && (
-                  <span className="rounded-full bg-green-500/10 px-2 py-0.5 text-xs text-green-500">
-                    Linked
-                  </span>
-                )}
-              </div>
-              <p className="text-muted-foreground mt-0.5 text-sm">
-                Link this Marketplace purchase to your signed-in Studio account.
-              </p>
-
-              {!accountLinked ? (
-                <div className="mt-4 space-y-3">
-                  {session?.user?.email && (
-                    <p className="text-muted-foreground text-sm">
-                      Signing in as{' '}
-                      <span className="text-foreground font-medium">
-                        {session.user.email}
-                      </span>
-                    </p>
-                  )}
-                  <Button size="sm" onClick={linkAccount} disabled={loading}>
-                    {loading && (
-                      <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />
-                    )}
-                    Link current account
-                  </Button>
-                </div>
-              ) : (
-                session?.user?.email && (
-                  <p className="text-muted-foreground mt-3 text-sm">
-                    Linked as{' '}
+        {/* Account link status — handled automatically, no buyer action */}
+        <div className="bg-card border-border flex items-center gap-3 rounded-xl border p-4 shadow-sm">
+          {accountLinked ? (
+            <>
+              <CheckCircle2 className="h-4 w-4 shrink-0 text-green-500" />
+              <p className="text-sm">
+                {session?.user?.email ? (
+                  <>
+                    Account linked as{' '}
                     <span className="font-medium text-green-500">
                       {session.user.email}
                     </span>
-                  </p>
-                )
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* ── Step 2: Organization ── */}
-        <div
-          className={cn(
-            'bg-card border-border rounded-xl border p-5 shadow-sm transition-all',
-            Boolean(orgId) && 'border-green-500/25',
+                  </>
+                ) : (
+                  'Account linked to this subscription.'
+                )}
+              </p>
+            </>
+          ) : (
+            <>
+              <Loader2 className="text-muted-foreground h-4 w-4 shrink-0 animate-spin" />
+              <p className="text-muted-foreground text-sm">
+                Linking your account to this subscription...
+              </p>
+            </>
           )}
-        >
-          <div className="flex items-start gap-4">
-            <StepBadge
-              step={2}
-              completed={Boolean(orgId)}
-              active={step2Active}
-            />
-            <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-2">
-                <p
-                  className={cn(
-                    'font-semibold',
-                    Boolean(orgId) && 'text-green-500',
-                  )}
-                >
-                  Organization
-                </p>
-                {Boolean(orgId) && (
-                  <span className="rounded-full bg-green-500/10 px-2 py-0.5 text-xs text-green-500">
-                    Created
-                  </span>
-                )}
-              </div>
-              <p className="text-muted-foreground mt-0.5 text-sm">
-                Create and link the buyer organization for this Marketplace
-                subscription.
-              </p>
-
-              {!orgId ? (
-                <div className="mt-4 space-y-4">
-                  <div className="grid gap-2">
-                    <Label htmlFor="marketplace-org-name">
-                      Organization name{' '}
-                      <span className="text-destructive text-xs">*</span>
-                    </Label>
-                    <Input
-                      id="marketplace-org-name"
-                      value={orgName}
-                      onChange={(e) => setOrgName(e.target.value)}
-                      placeholder="Acme University"
-                      disabled={loading}
-                    />
-                  </div>
-                  <div className="grid gap-2">
-                    <Label htmlFor="marketplace-org-website">Website</Label>
-                    <Input
-                      id="marketplace-org-website"
-                      value={orgWebsite}
-                      onChange={(e) => setOrgWebsite(e.target.value)}
-                      placeholder="https://acme.example"
-                      disabled={loading}
-                    />
-                  </div>
-                  <div className="grid gap-2">
-                    <Label htmlFor="marketplace-org-description">
-                      Description
-                    </Label>
-                    <Textarea
-                      id="marketplace-org-description"
-                      value={orgDescription}
-                      onChange={(e) => setOrgDescription(e.target.value)}
-                      placeholder="Issuer and verifier organization"
-                      disabled={loading}
-                      rows={3}
-                    />
-                  </div>
-                  <Button
-                    size="sm"
-                    onClick={createOrganization}
-                    disabled={loading || !orgName.trim()}
-                  >
-                    {loading && (
-                      <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />
-                    )}
-                    Create and link organization
-                  </Button>
-                </div>
-              ) : (
-                orgName && (
-                  <p className="text-muted-foreground mt-3 text-sm">
-                    <span className="font-medium text-green-500">
-                      {orgName}
-                    </span>{' '}
-                    linked to this subscription.
-                  </p>
-                )
-              )}
-            </div>
-          </div>
         </div>
 
-        {/* ── Step 3: Activate ── */}
+        {/* Organization + activation */}
         <div className="bg-card border-border rounded-xl border p-5 shadow-sm">
-          <div className="flex items-start gap-4">
-            <StepBadge step={3} completed={false} active={step3Active} />
-            <div className="min-w-0 flex-1">
-              <p className="font-semibold">Activate</p>
-              <p className="text-muted-foreground mt-0.5 text-sm">
-                Activation starts Microsoft billing only after the account and
-                organization are linked.
-              </p>
-              <div className="mt-4 space-y-2">
-                <Button
-                  size="sm"
-                  onClick={activate}
-                  disabled={loading || !orgId}
-                  variant={!orgId ? 'outline' : 'default'}
-                >
-                  {loading && (
-                    <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />
+          {orgId ? (
+            <div className="space-y-4">
+              <div>
+                <p className="font-semibold">Activate subscription</p>
+                <p className="text-muted-foreground mt-0.5 text-sm">
+                  {orgName ? (
+                    <>
+                      <span className="font-medium text-green-500">
+                        {orgName}
+                      </span>{' '}
+                      is linked to this subscription. Activate to start your
+                      Microsoft billing.
+                    </>
+                  ) : (
+                    'Your organization is linked. Activate to start your Microsoft billing.'
                   )}
-                  Activate subscription
-                </Button>
-                {!orgId && (
-                  <p className="text-muted-foreground text-xs">
-                    Complete steps 1 and 2 before activating.
-                  </p>
-                )}
+                </p>
               </div>
+              <div className="flex items-start gap-3 rounded-lg border border-amber-500/40 bg-amber-500/10 p-4">
+                <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-500" />
+                <p className="text-sm text-amber-500/90">
+                  Activation starts Microsoft Marketplace billing for this
+                  subscription.
+                </p>
+              </div>
+              <Button
+                onClick={activateExistingOrganization}
+                disabled={loading || !accountLinked}
+              >
+                {loading && (
+                  <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />
+                )}
+                Activate subscription
+              </Button>
             </div>
-          </div>
+          ) : (
+            <div className="space-y-4">
+              <div>
+                <p className="font-semibold">Your organization</p>
+                <p className="text-muted-foreground mt-0.5 text-sm">
+                  Create the buyer organization for this subscription.
+                  We&apos;ll link it and activate billing in a single step.
+                </p>
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="marketplace-org-name">
+                  Organization name{' '}
+                  <span className="text-destructive text-xs">*</span>
+                </Label>
+                <Input
+                  id="marketplace-org-name"
+                  value={orgName}
+                  onChange={(e) => setOrgName(e.target.value)}
+                  placeholder="Acme University"
+                  disabled={loading}
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="marketplace-org-website">Website</Label>
+                <Input
+                  id="marketplace-org-website"
+                  value={orgWebsite}
+                  onChange={(e) => setOrgWebsite(e.target.value)}
+                  placeholder="https://acme.example"
+                  disabled={loading}
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="marketplace-org-description">Description</Label>
+                <Textarea
+                  id="marketplace-org-description"
+                  value={orgDescription}
+                  onChange={(e) => setOrgDescription(e.target.value)}
+                  placeholder="Issuer and verifier organization"
+                  disabled={loading}
+                  rows={3}
+                />
+              </div>
+              <div className="flex items-start gap-3 rounded-lg border border-amber-500/40 bg-amber-500/10 p-4">
+                <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-500" />
+                <p className="text-sm text-amber-500/90">
+                  Creating your organization activates this Microsoft
+                  Marketplace subscription and starts billing.
+                </p>
+              </div>
+              <Button
+                onClick={createOrganizationAndActivate}
+                disabled={loading || !accountLinked || !orgName.trim()}
+              >
+                {loading && (
+                  <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />
+                )}
+                Create organization & activate subscription
+              </Button>
+              {!accountLinked && (
+                <p className="text-muted-foreground text-xs">
+                  Linking your account — the button enables once it&apos;s done.
+                </p>
+              )}
+            </div>
+          )}
         </div>
       </div>
     </div>
