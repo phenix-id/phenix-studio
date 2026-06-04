@@ -336,7 +336,7 @@ const QrScanDialog = ({
                 value={invitationUrl}
                 size={208}
                 fgColor="#0F0F1D"
-                bgColor="transparent"
+                bgColor="#ffffff"
                 style={{ height: 'auto', maxWidth: '100%', width: '100%' }}
               />
               {/* Center logo — 58×58 white circle, absolutely centered */}

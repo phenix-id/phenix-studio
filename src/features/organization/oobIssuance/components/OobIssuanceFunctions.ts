@@ -78,8 +78,8 @@ export const buildW3cPayload = (
       proofPurpose,
     },
     isShortenUrl: true,
+    autoAcceptCredential: 'always',
     reuseConnection: true,
-    protocolVersion: 'v2',
   }
 }
 

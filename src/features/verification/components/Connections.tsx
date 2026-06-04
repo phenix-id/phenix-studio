@@ -26,7 +26,12 @@ import { DidMethod } from '@/common/enums'
 import { ITableData } from '@/components/DataTable/interface'
 import PageContainer from '@/components/layout/page-container'
 import { RequestProofIcon } from '@/components/iconsSvg'
-import { RequestType } from '@/features/common/enum'
+// eslint-disable-next-line sort-imports
+import {
+  AutoAccept,
+  ProtocolVersion,
+  RequestType,
+} from '@/features/common/enum'
 import { apiStatusCodes } from '@/config/CommonConstant'
 import { dateConversion } from '@/utils/DateConversion'
 import { getOrganizationById } from '@/app/api/organization'
@@ -256,24 +261,21 @@ const Connections = (): JSX.Element => {
         verifyCredentialPayload = {
           connectionId:
             connectionIds.length === 1 ? connectionIds[0] : connectionIds,
-          comment: 'proof request',
+          protocolVersion: ProtocolVersion.V2,
+          autoAcceptProof: AutoAccept.ALWAYS,
 
           presentationDefinition: {
             id: uuidv4(),
-            purpose: 'proof request',
+            name: Object.keys(groupedAttributes)[0] ?? 'Proof Request',
             // eslint-disable-next-line camelcase
             input_descriptors: Object.keys(groupedAttributes).map(
               (schemaName) => {
                 const attributesForSchema = groupedAttributes[schemaName]
 
-                const attributePathsForSchema = attributesForSchema.map(
-                  (attr: { attributeName: string }) =>
-                    `$.credentialSubject['${attr.attributeName}']`,
-                )
-
                 return {
                   id: uuidv4(),
                   name: schemaName,
+                  purpose: 'Verify proof',
                   schema: [
                     {
                       uri: schemas.find(
@@ -283,13 +285,12 @@ const Connections = (): JSX.Element => {
                     },
                   ],
                   constraints: {
-                    fields: [
-                      {
-                        path: attributePathsForSchema,
-                      },
-                    ],
+                    fields: attributesForSchema.map(
+                      (attr: { attributeName: string }) => ({
+                        path: [`$.credentialSubject['${attr.attributeName}']`],
+                      }),
+                    ),
                   },
-                  purpose: 'Verify proof',
                 }
               },
             ),
