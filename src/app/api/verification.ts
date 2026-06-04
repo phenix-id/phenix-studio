@@ -123,6 +123,24 @@ export const verifyCredentialV2 = async (
   }
 }
 
+export const getProofById = async (
+  proofId: string,
+  orgId: string,
+): Promise<AxiosResponse | string> => {
+  const url = `${apiRoutes.organizations.root}/${orgId}${apiRoutes.Verification.getProofById}/${proofId}`
+  const axiosPayload = {
+    url,
+    config: getHeaderConfigs(),
+  }
+
+  try {
+    return await axiosGet(axiosPayload)
+  } catch (error) {
+    const err = error as Error
+    return err?.message
+  }
+}
+
 export const getCredentialDefinitionsForVerification = async (
   schemaId: string,
 ): Promise<AxiosResponse | string> => {

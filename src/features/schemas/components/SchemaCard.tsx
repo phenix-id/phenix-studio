@@ -130,6 +130,26 @@ const SchemaCard = (props: Readonly<ISchemaCardProps>): React.JSX.Element => {
   )
 
   const handleCardClick = (): void => {
+    // On verification pages with a selectable schema — toggle selection on the
+    // whole card instead of relying on the hidden checkbox.
+    if (isVerificationPage && props.showCheckbox && !hasNestedAttributes) {
+      const newSelected = !isSelected
+      setIsSelected(newSelected)
+      props.onChange?.(
+        newSelected,
+        newSelected
+          ? [
+              {
+                schemaId: props.schemaId,
+                schemaName: props.schemaName,
+                attributes: props.attributes,
+              },
+            ]
+          : [],
+      )
+      return
+    }
+
     if (isVerificationPage) {
       return
     }
@@ -146,13 +166,24 @@ const SchemaCard = (props: Readonly<ISchemaCardProps>): React.JSX.Element => {
     }
   }
 
+  const isSelectable =
+    isVerificationPage && props.showCheckbox && !hasNestedAttributes
+
   return (
     <Card
-      className={`relative h-full w-full overflow-hidden rounded-xl shadow-xl transition-transform duration-300 ${
-        props.w3cSchema || props.isClickable === false || isVerificationPage
-          ? 'cursor-default'
-          : 'cursor-pointer hover:scale-[1.02] hover:shadow-lg'
-      } ${hasNestedAttributes ? 'pointer-events-none opacity-80' : ''}`}
+      className={[
+        'relative h-full w-full overflow-hidden rounded-xl shadow-xl transition-all duration-200',
+        isSelectable
+          ? 'cursor-pointer'
+          : props.w3cSchema || props.isClickable === false || isVerificationPage
+            ? 'cursor-default'
+            : 'cursor-pointer hover:scale-[1.02] hover:shadow-lg',
+        // Purple selection highlight — solid border + glow when selected
+        isSelected && isSelectable
+          ? 'border-[rgba(87,29,247,0.70)] shadow-[0_0_0_2px_rgba(87,29,247,0.20),0_8px_32px_rgba(87,29,247,0.18)]'
+          : '',
+        hasNestedAttributes ? 'pointer-events-none opacity-80' : '',
+      ].join(' ')}
       onClick={handleCardClick}
     >
       {hasNestedAttributes && (
@@ -262,7 +293,9 @@ const SchemaCard = (props: Readonly<ISchemaCardProps>): React.JSX.Element => {
             )}
         </div>
 
-        {props.showCheckbox && !hasNestedAttributes && (
+        {/* Checkbox rendered only outside verification pages — on verification
+            pages the whole card is clickable and the tick badge replaces it. */}
+        {props.showCheckbox && !hasNestedAttributes && !isVerificationPage && (
           <CustomCheckbox
             isSelectedSchema={Boolean(isSelected)}
             onChange={handleCheckboxChange}

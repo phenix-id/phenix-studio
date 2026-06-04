@@ -349,7 +349,7 @@ const Credentials = (): JSX.Element => {
 
   return (
     <PageContainer>
-      <div className="mb-2 flex flex-wrap items-center justify-between space-y-2 gap-x-4">
+      <div className="mb-2 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h2 className="text-2xl font-bold tracking-tight">Credentials</h2>
           <p className="text-muted-foreground">
@@ -357,7 +357,7 @@ const Credentials = (): JSX.Element => {
           </p>
         </div>
         {walletCreated && (
-          <div className="flex items-center gap-2">
+          <div className="flex shrink-0 items-center gap-2">
             {/* Reload Button */}
             <button
               onClick={handleReload}
