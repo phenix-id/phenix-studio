@@ -30,19 +30,20 @@ export const protocolOptions = [
       />
     ),
   },
-  {
-    id: 'oid4vp',
-    title: 'OpenID4VP',
-    desc: 'Use OpenID for Verifiable Presentations.',
-    disabled: true,
-    icon: (
-      <img
-        src="/images/oid4vc_logo.png"
-        alt="OpenID4VP Logo"
-        className="h-10 w-30"
-      />
-    ),
-  },
+  // OpenID4VP — hidden until ready for release
+  // {
+  //   id: 'oid4vp',
+  //   title: 'OpenID4VP',
+  //   desc: 'Use OpenID for Verifiable Presentations.',
+  //   disabled: true,
+  //   icon: (
+  //     <img
+  //       src="/images/oid4vc_logo.png"
+  //       alt="OpenID4VP Logo"
+  //       className="h-10 w-30"
+  //     />
+  //   ),
+  // },
 ]
 
 export const subOptionsMap = {
@@ -54,14 +55,15 @@ export const subOptionsMap = {
       tooltip: 'W3C VCDM defines interoperable verifiable credentials.',
       disabled: false,
     },
-    {
-      id: 'anoncreds',
-      title: 'AnonCreds',
-      desc: 'Privacy-preserving credentials issued over DIDComm.',
-      tooltip:
-        'AnonCreds enables privacy-preserving credentials using ZK proofs.',
-      disabled: true,
-    },
+    // AnonCreds — hidden until ready for release
+    // {
+    //   id: 'anoncreds',
+    //   title: 'AnonCreds',
+    //   desc: 'Privacy-preserving credentials issued over DIDComm.',
+    //   tooltip:
+    //     'AnonCreds enables privacy-preserving credentials using ZK proofs.',
+    //   disabled: true,
+    // },
   ],
 
   oid4vp: [

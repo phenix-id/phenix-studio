@@ -119,15 +119,15 @@ const OobQrVerification = (): JSX.Element => {
         return acc
       }, {})
 
-    // Each attribute becomes its own Field Query Object with a single-element
-    // path array — DIF PE spec: path is an array of alternative JSONPaths for
-    // the same logical field, NOT a list of different fields merged together.
+    // Each schema becomes one input_descriptor; its fields list the requested
+    // credential attributes.  DIF PE spec: each path entry is a single-element
+    // array of alternative JSONPaths for that logical field.
     const inputDescriptors = Object.values(groupedAttributes).map(
-      (descriptor) => ({
-        id: descriptor.id,
+      (descriptor, index) => ({
+        id: `input_${index}`,
         name: descriptor.name,
-        schema: descriptor.schema,
         purpose: descriptor.purpose,
+        schema: descriptor.schema,
         constraints: {
           fields: descriptor.constraints.fields.map((field) => ({
             path: [field.path],
@@ -136,22 +136,22 @@ const OobQrVerification = (): JSX.Element => {
       }),
     )
 
-    // presentationDefinition.name is required by the backend DTO and forwarded
-    // to Credo-ts — fall back to 'Proof Request' when no schema name is set.
+    // presentationDefinition.name: fall back to 'Proof Request' when
+    // no schema name is available.
     const definitionName =
       Object.values(groupedAttributes)[0]?.name ?? 'Proof Request'
 
     return {
-      goalCode: 'verification',
       protocolVersion: ProtocolVersion.V2,
       isShortenUrl: true,
+      reuseConnection: true,
+      autoAcceptProof: AutoAccept.ALWAYS,
       presentationDefinition: {
         id: crypto.randomUUID(),
         name: definitionName,
         // eslint-disable-next-line camelcase
         input_descriptors: inputDescriptors,
       },
-      autoAcceptProof: AutoAccept.ALWAYS,
     }
   }
 

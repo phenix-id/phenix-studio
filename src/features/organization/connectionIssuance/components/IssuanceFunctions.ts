@@ -89,6 +89,7 @@ export const handleSubmit = async ({
           proofPurpose,
         },
       })),
+      autoAcceptCredential: 'always',
       orgId: values.orgId,
     }
   }

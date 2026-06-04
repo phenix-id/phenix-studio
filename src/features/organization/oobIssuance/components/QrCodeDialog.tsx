@@ -21,12 +21,18 @@ const resolveIssuanceStatus = (res: AxiosResponse): QrScanStatus => {
   if (state === IssueCredential.abandoned) {
     return 'abandoned'
   }
+  // requestReceived means the holder's wallet scanned the QR and accepted the offer.
+  // credentialIssued / credentialReceived are subsequent stages after the wallet engages.
+  // Only these post-scan states should show "Wallet connected".
   if (
-    state === IssueCredential.offerSent ||
-    state === IssueCredential.credentialIssued
+    state === IssueCredential.requestReceived ||
+    state === IssueCredential.credentialIssued ||
+    state === IssueCredential.credentialReceived
   ) {
     return 'offer-sent'
   }
+  // offerSent is the initial OOB state set immediately when the invitation is created
+  // — the holder has NOT scanned yet. Fall through to 'waiting'.
   return 'waiting'
 }
 
