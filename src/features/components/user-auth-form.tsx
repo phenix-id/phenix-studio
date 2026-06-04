@@ -2,7 +2,9 @@
 
 import * as z from 'zod'
 
-import { Eye, EyeOff, KeyRound, LockKeyhole, Mail } from 'lucide-react'
+import { Eye, EyeOff, LockKeyhole, Mail } from 'lucide-react'
+// KeyRound — used by passkey tab (hidden until ready for release)
+// import { KeyRound } from 'lucide-react'
 import {
   Form,
   FormControl,
@@ -45,7 +47,8 @@ enum PlatformRoles {
 }
 
 export default function SignInViewPage(): React.JSX.Element {
-  const [isPasswordTab, setIsPasswordTab] = useState(true)
+  // setIsPasswordTab only used by passkey toggle (hidden until ready for release)
+  const [isPasswordTab] = useState(true)
   const [loading, setLoading] = useState(false)
   const [forgetPasswordLoading, setForgetPasswordLoading] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
@@ -316,6 +319,7 @@ export default function SignInViewPage(): React.JSX.Element {
           </p>
         </div>
 
+        {/* Passkey tab toggle — hidden until passkey feature is ready for release
         <div className="bg-muted mb-4 flex h-10 overflow-hidden rounded-md p-1 text-sm font-medium">
           <button
             type="button"
@@ -342,6 +346,7 @@ export default function SignInViewPage(): React.JSX.Element {
             Passkey
           </button>
         </div>
+        */}
 
         <Form {...signInForm}>
           <form onSubmit={handleFormSubmit} className="space-y-4">

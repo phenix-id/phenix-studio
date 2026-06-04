@@ -47,8 +47,8 @@ export interface IOobW3cIssuancePayload {
   }
   options: { proofType: string; proofPurpose: string }
   isShortenUrl: true
+  autoAcceptCredential: 'always'
   reuseConnection: true
-  protocolVersion: 'v2'
 }
 
 export interface IOobResponse {

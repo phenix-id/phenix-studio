@@ -138,9 +138,11 @@ export function UserNav(): React.JSX.Element | null {
             Profile
           </DropdownMenuItem>
 
+          {/* Developer Settings — hidden until ready for release
           <DropdownMenuItem onClick={() => hardNavigate('/developers-setting')}>
             Developer Settings
           </DropdownMenuItem>
+          */}
 
           {process.env.NEXT_PUBLIC_ENABLE_BILLING_OPTION?.toLowerCase() ===
             'true' && (
