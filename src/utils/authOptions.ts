@@ -203,22 +203,29 @@ export const authOptions: MyAuthOptions = {
     async redirect({ url, baseUrl }) {
       try {
         const redirectUrl = new URL(url, baseUrl)
+        const baseUrlObj = new URL(baseUrl)
 
+        // Always allow same-origin redirects (e.g. callbackUrl: '/sign-in').
+        // This handles the case where NEXTAUTH_COOKIE_DOMAIN is not configured.
+        if (redirectUrl.origin === baseUrlObj.origin) {
+          return redirectUrl.toString()
+        }
+
+        // Allow cross-subdomain redirects within the configured cookie domain
+        // (needed for multi-subdomain SSO setups).
         const cookieDomain = process.env.NEXTAUTH_COOKIE_DOMAIN?.replace(
           /^\./,
           '',
         )
-        const isAllowed =
+        if (
           cookieDomain &&
           redirectUrl.hostname.endsWith(cookieDomain) &&
           ['http:', 'https:'].includes(redirectUrl.protocol)
-
-        if (isAllowed) {
+        ) {
           return redirectUrl.toString()
         }
       } catch (err) {
         console.error('Redirect error:', err)
-        return new URL(url, baseUrl).toString()
       }
 
       return baseUrl
