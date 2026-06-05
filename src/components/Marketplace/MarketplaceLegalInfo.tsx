@@ -23,8 +23,8 @@ export function MarketplaceLegalInfo(): React.JSX.Element {
             Marketplace trust and legal information
           </div>
           <p className="text-muted-foreground mt-2 max-w-2xl text-sm">
-            Review the Phenix ID Platform privacy, terms, and support details
-            before linking a Microsoft Marketplace purchase to your Studio
+            Review the PHENIX ID privacy, terms, and support details before
+            linking a Microsoft Marketplace purchase to your Studio
             organization.
           </p>
         </div>

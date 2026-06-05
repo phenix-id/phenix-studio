@@ -2,7 +2,7 @@ import { marketplaceLegal, supportSections } from '@/config/marketplaceLegal'
 import { LegalPage } from '@/components/Legal/LegalPage'
 
 export const metadata = {
-  title: 'Support | Phenix ID Platform',
+  title: 'Support | PHENIX ID',
 }
 
 export default function SupportPage(): React.JSX.Element {

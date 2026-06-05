@@ -137,7 +137,7 @@ const logoBasePath = '/logos'
 export const appLogoPath = `${logoBasePath}/Phenix_Logo.png`
 export const appLogoDarkPath = `${logoBasePath}/Phenix_Logo_White.png`
 export const appFaviconPath = `${logoBasePath}/favicon.png`
-export const appLogoAltText = 'Phenix Logo'
+export const appLogoAltText = 'PHENIX ID Logo'
 export const appLogoWidth = 781
 export const appLogoHeight = 204
 export const CredeblLogo = appLogoPath
@@ -252,7 +252,7 @@ export const bulkIssuanceApiParameter = {
   allSearch: '',
 }
 
-export const defaultFooterText = 'Phenix ID. All rights reserved.'
+export const defaultFooterText = 'PHENIX ID. All rights reserved.'
 export const defaultCredeblFooterText = defaultFooterText
 
 export const InfoText = {

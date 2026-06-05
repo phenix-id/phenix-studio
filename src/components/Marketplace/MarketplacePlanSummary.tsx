@@ -55,7 +55,7 @@ export function MarketplacePlanSummary({
       <div className="rounded-md border">
         <div className="border-b p-4">
           <p className="text-base font-semibold">
-            {subscription.subscriptionName || 'Phenix ID Platform'}
+            {subscription.subscriptionName || 'PHENIX ID'}
           </p>
           <p className="text-muted-foreground text-sm">
             Microsoft Marketplace SaaS subscription

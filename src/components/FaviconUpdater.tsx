@@ -8,7 +8,7 @@ const APP_TITLE = process.env.NEXT_PUBLIC_APP_TITLE?.trim()
 
 const DEFAULT_CONFIG = {
   favicon: appFaviconPath,
-  title: APP_TITLE ? APP_TITLE : 'Phenix Studio',
+  title: APP_TITLE ? APP_TITLE : 'PHENIX ID',
 }
 
 export function FaviconUpdater(): JSX.Element | null {

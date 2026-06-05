@@ -8,6 +8,7 @@ import {
   apiStatusCodes,
   optionsSchemaCreation as options,
 } from '../../../config/CommonConstant'
+import { AlertComponent } from '@/components/AlertComponent'
 import type { AxiosResponse } from 'axios'
 import { Card } from '@/components/ui/card'
 import FormikData from './FormikData'
@@ -140,19 +141,26 @@ const CreateSchema = (): React.JSX.Element => {
       setSuccess(data?.message)
       setCreateLoader(false)
       setLoading(true)
+      // Close the dialog shortly after showing the success state,
+      // then navigate away once the message has been seen.
+      setTimeout(() => {
+        setShowPopup({ type: 'create', show: false })
+      }, 1000)
       setTimeout(() => {
         setSuccess(null)
         hardNavigate('/schemas')
       }, 1500)
     } else {
+      // Close the confirmation dialog immediately — it was asking "do you want
+      // to proceed?" and the answer is "you can't". Keeping the error inside
+      // the dialog is confusing and the 2-second auto-dismiss meant the user
+      // often missed it entirely.
+      // Show the error on the page itself so the user can read it at their
+      // own pace and take action (e.g. upgrading their plan).
+      setShowPopup({ type: 'create', show: false })
       setFailure(createSchema as string)
       setCreateLoader(false)
-      setTimeout(() => setFailure(null), 2000)
     }
-
-    setTimeout(() => {
-      setShowPopup({ type: 'create', show: false })
-    }, 2000)
   }
 
   const confirmCreateSchema = (): void => {
@@ -230,6 +238,19 @@ const CreateSchema = (): React.JSX.Element => {
       <h1 className="text-foreground ml-10 text-xl font-semibold">
         Create Schema
       </h1>
+
+      {/* Page-level error — shown after the confirmation dialog closes on failure.
+          No auto-dismiss: the user reads it and closes it manually. */}
+      {failure && (
+        <div className="mx-6 mt-4">
+          <AlertComponent
+            message={failure}
+            type="failure"
+            onAlertClose={() => setFailure(null)}
+          />
+        </div>
+      )}
+
       <Card className="m-0 px-4 py-8 md:m-6" id="createSchemaCard">
         <div>
           <FormikData
