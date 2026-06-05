@@ -3,6 +3,7 @@
 import {
   MarketplaceEntitlements,
   getOrgEntitlements,
+  refreshMarketplaceSubscription,
 } from '@/app/api/marketplace'
 import { useCallback, useEffect, useState } from 'react'
 
@@ -48,6 +49,22 @@ export const useEntitlements = (orgId?: string): UseEntitlementsResult => {
           ? response
           : 'Unable to load Marketplace entitlements.',
       )
+      setLoading(false)
+      return
+    }
+
+    // Auto-sync with Microsoft when the subscription is linked but the status
+    // hasn't propagated to 'Subscribed' yet — covers the window right after
+    // Marketplace onboarding before the backend processes the webhook.
+    // Once status is 'Subscribed' this branch never runs again.
+    if (
+      data.subscription?.subscriptionId &&
+      data.subscription.status !== 'Subscribed'
+    ) {
+      await refreshMarketplaceSubscription(data.subscription.subscriptionId)
+      const syncedResponse = await getOrgEntitlements(orgId)
+      const syncedData = extractData<MarketplaceEntitlements>(syncedResponse)
+      setEntitlements(syncedData ?? data)
       setLoading(false)
       return
     }
