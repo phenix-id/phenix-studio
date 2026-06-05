@@ -39,7 +39,11 @@ import {
 import { useAppDispatch, useAppSelector } from '@/lib/hooks'
 import { usePathname } from 'next/navigation'
 
-import { IconChevronRight } from '@tabler/icons-react'
+import {
+  IconBook,
+  IconChevronRight,
+  IconExternalLink,
+} from '@tabler/icons-react'
 import { Icons } from '../icons'
 import Image from 'next/image'
 import Link from 'next/link'
@@ -200,7 +204,7 @@ export default function AppSidebar(): React.JSX.Element {
       </SidebarHeader>
 
       <SidebarContent className="overflow-x-hidden">
-        <SidebarGroup>
+        <SidebarGroup className="flex-1">
           <SidebarMenu>
             {managedNavItem.map((item: NavItem): JSX.Element => {
               const Icon = item.icon ? Icons[item.icon] : Icons.logo
@@ -267,6 +271,26 @@ export default function AppSidebar(): React.JSX.Element {
             })}
           </SidebarMenu>
         </SidebarGroup>
+
+        {process.env.NEXT_PUBLIC_DOCS_URL && (
+          <SidebarGroup className="mt-auto border-t pt-2">
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild tooltip="Documentation">
+                  <a
+                    href={process.env.NEXT_PUBLIC_DOCS_URL}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    <IconBook className="shrink-0" />
+                    <span>Documentation</span>
+                    <IconExternalLink className="ml-auto h-3 w-3 shrink-0 opacity-40" />
+                  </a>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            </SidebarMenu>
+          </SidebarGroup>
+        )}
       </SidebarContent>
 
       <SidebarRail />

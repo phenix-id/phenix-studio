@@ -51,6 +51,22 @@ export const navItems: NavItem[] = [
     ],
   },
   {
+    title: 'Schemas',
+    url: '/schemas',
+    icon: 'schemas',
+    shortcut: ['s', 's'],
+    isActive: false,
+    items: [],
+  },
+  {
+    title: 'Users',
+    url: '/users',
+    icon: 'users',
+    shortcut: ['u', 'u'],
+    isActive: false,
+    items: [],
+  },
+  {
     title: 'Billing',
     url: '/organizations/billing',
     icon: 'billing',
