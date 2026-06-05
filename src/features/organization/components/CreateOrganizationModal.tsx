@@ -97,14 +97,13 @@ export default function OrganizationOnboarding(): React.JSX.Element {
   const clientAlias = searchParams.get('clientAlias')
   const dispatch = useAppDispatch()
 
-  // When the Marketplace is the only source of subscriptions, standalone org
-  // creation is gated: route the user to subscribe instead. Editing an existing
-  // org (orgId present) is always allowed. The backend guard is the hard enforcement.
-  const marketplaceRequired =
-    process.env.NEXT_PUBLIC_MARKETPLACE_REQUIRED === 'true'
-  const [subscriptionRequired, setSubscriptionRequired] = useState<boolean>(
-    marketplaceRequired && !orgId,
-  )
+  // subscriptionRequired is set only AFTER the backend rejects the request with
+  // marketplace_subscription_required (no subscription at all). Pre-emptively blocking
+  // here would also gate users who have an active subscription but have hit their org
+  // limit — they should see the upgrade CTA, not the sign-up page.
+  // The backend guard (MarketplaceSubscriptionRequiredGuard) is the actual enforcement.
+  const [subscriptionRequired, setSubscriptionRequired] =
+    useState<boolean>(false)
 
   const fetchOrganizationDetails = async (): Promise<void> => {
     setLoading(true)
