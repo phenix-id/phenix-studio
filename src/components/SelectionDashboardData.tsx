@@ -1,7 +1,7 @@
 'use client'
 
-import { FileSpreadsheet, Mail, QrCode, Users } from 'lucide-react'
 import { JSX, useEffect } from 'react'
+import { Mail, QrCode, Users } from 'lucide-react'
 import { useAppDispatch, useAppSelector } from '@/lib/hooks'
 import { IOptions } from './types/Dashboard'
 import SelectionDashboard from './SelectionDashboard'
@@ -49,15 +49,16 @@ const SelectionDashboardData = (): JSX.Element => {
       tag: 'Single holder',
       tagVariant: 'neutral',
     },
-    {
-      heading: 'Bulk',
-      icon: FileSpreadsheet,
-      description:
-        'Issue to many holders at once by uploading a .CSV of records mapped to your schema.',
-      path: pathRoutes.organizations.Issuance.bulkIssuance,
-      tag: '.CSV upload',
-      tagVariant: 'purple',
-    },
+    // Bulk issuance — hidden until ready for release
+    // {
+    //   heading: 'Bulk',
+    //   icon: FileSpreadsheet,
+    //   description:
+    //     'Issue to many holders at once by uploading a .CSV of records mapped to your schema.',
+    //   path: pathRoutes.organizations.Issuance.bulkIssuance,
+    //   tag: '.CSV upload',
+    //   tagVariant: 'purple',
+    // },
     {
       heading: 'QR Code',
       icon: QrCode,
@@ -89,15 +90,16 @@ const SelectionDashboardData = (): JSX.Element => {
       tag: 'Single holder',
       tagVariant: 'neutral',
     },
-    {
-      heading: 'Bulk',
-      icon: FileSpreadsheet,
-      description:
-        'Verify credentials from many holders at once by uploading a .CSV of records.',
-      path: '',
-      tag: '.CSV upload',
-      tagVariant: 'purple',
-    },
+    // Bulk verification — hidden until ready for release
+    // {
+    //   heading: 'Bulk',
+    //   icon: FileSpreadsheet,
+    //   description:
+    //     'Verify credentials from many holders at once by uploading a .CSV of records.',
+    //   path: '',
+    //   tag: '.CSV upload',
+    //   tagVariant: 'purple',
+    // },
     {
       heading: 'QR Code',
       icon: QrCode,
@@ -124,7 +126,7 @@ const SelectionDashboardData = (): JSX.Element => {
           : 'Choose how the credential offer reaches your holders. You can sign and review before anything is sent.'
       }
       options={isVerification ? verifyOptions : issueOptions}
-      gridCols={4}
+      gridCols={3}
       backButtonPath={
         isVerification
           ? pathRoutes.organizations.credentials
