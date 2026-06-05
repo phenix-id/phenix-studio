@@ -15,8 +15,10 @@ import {
   ApiErrorResult,
   createOrganization,
   getOrganizationById,
+  getOrganizations,
   updateOrganization,
 } from '@/app/api/organization'
+import { getOrgEntitlements } from '@/app/api/marketplace'
 import { fetchCities, fetchCountries, fetchStates } from '../helper/geoHelpers'
 import {
   setOrgId,
@@ -24,7 +26,7 @@ import {
   setSelectedOrgId,
   setTenantData,
 } from '@/lib/orgSlice'
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 
 import { AlertComponent } from '@/components/AlertComponent'
@@ -37,11 +39,13 @@ import { Label } from '@/components/ui/label'
 import Loader from '@/components/Loader'
 import LogoUploader from './LogoUploader'
 import PageContainer from '@/components/layout/page-container'
+import { PlanLimitNotice } from '@/components/Marketplace/PlanLimitNotice'
 import Stepper from '@/components/StepperComponent'
 import { SubscribeRequired } from '@/components/Marketplace/SubscribeRequired'
+import { isMarketplaceLimitError } from '@/config/marketplaceErrors'
 import { apiStatusCodes } from '@/config/CommonConstant'
 import { hardNavigate } from '@/utils/navigation'
-import { useAppDispatch } from '@/lib/hooks'
+import { useAppDispatch, useAppSelector } from '@/lib/hooks'
 
 type Countries = {
   id: number
@@ -79,6 +83,9 @@ export default function OrganizationOnboarding(): React.JSX.Element {
   const [orgData, setOrgData] = useState<IOrgFormValues | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
   const [failure, setFailure] = useState<string | null>(null)
+  // Set when org creation is rejected because the plan's organization limit is reached,
+  // so we can offer an upgrade CTA instead of a dead-end error.
+  const [limitCode, setLimitCode] = useState<string | null>(null)
   const [isEditMode, setIsEditMode] = useState<boolean>(false)
   const [loading, setLoading] = useState<boolean>(false)
   const [createLoading, setCreateLoading] = useState<boolean>(false)
@@ -91,15 +98,16 @@ export default function OrganizationOnboarding(): React.JSX.Element {
   const redirectTo = searchParams.get('redirectTo')
   const clientAlias = searchParams.get('clientAlias')
   const dispatch = useAppDispatch()
+  // Used for the pre-flight org-limit check (existing org's subscription limits).
+  const selectedOrgId = useAppSelector((state) => state.organization.orgId)
 
-  // When the Marketplace is the only source of subscriptions, standalone org
-  // creation is gated: route the user to subscribe instead. Editing an existing
-  // org (orgId present) is always allowed. The backend guard is the hard enforcement.
-  const marketplaceRequired =
-    process.env.NEXT_PUBLIC_MARKETPLACE_REQUIRED === 'true'
-  const [subscriptionRequired, setSubscriptionRequired] = useState<boolean>(
-    marketplaceRequired && !orgId,
-  )
+  // subscriptionRequired is set only AFTER the backend rejects the request with
+  // marketplace_subscription_required (no subscription at all). Pre-emptively blocking
+  // here would also gate users who have an active subscription but have hit their org
+  // limit — they should see the upgrade CTA, not the sign-up page.
+  // The backend guard (MarketplaceSubscriptionRequiredGuard) is the actual enforcement.
+  const [subscriptionRequired, setSubscriptionRequired] =
+    useState<boolean>(false)
 
   const fetchOrganizationDetails = async (): Promise<void> => {
     setLoading(true)
@@ -135,6 +143,43 @@ export default function OrganizationOnboarding(): React.JSX.Element {
     }
   }
 
+  // Pre-flight org-limit check. Called on mount and again when the user clicks
+  // "I've upgraded — Refresh" so the CTA clears without a page reload if they
+  // have already upgraded their plan in Microsoft.
+  const checkOrgLimit = useCallback(async (): Promise<void> => {
+    if (!selectedOrgId) {
+      return
+    }
+
+    const [entitlementsRes, orgsRes] = await Promise.all([
+      getOrgEntitlements(selectedOrgId),
+      getOrganizations(1, 1),
+    ])
+
+    const entitlements =
+      typeof entitlementsRes !== 'string'
+        ? ((
+            entitlementsRes.data as {
+              data?: { limits?: { maxOrganizations?: number | null } }
+            }
+          ).data ?? null)
+        : null
+
+    const totalOrgCount =
+      typeof orgsRes !== 'string'
+        ? ((orgsRes.data as { data?: { totalCount?: number } }).data
+            ?.totalCount ?? 0)
+        : 0
+
+    const maxOrgs = entitlements?.limits?.maxOrganizations
+    if (maxOrgs !== null && maxOrgs !== undefined && totalOrgCount >= maxOrgs) {
+      setLimitCode('marketplace_org_limit_reached')
+    } else {
+      // Limit no longer applies (plan was upgraded) — clear any stale notice.
+      setLimitCode(null)
+    }
+  }, [selectedOrgId])
+
   useEffect(() => {
     const initializeData = async (): Promise<void> => {
       setInitializing(true)
@@ -146,6 +191,9 @@ export default function OrganizationOnboarding(): React.JSX.Element {
           setIsEditMode(true)
           await fetchOrganizationDetails()
         } else {
+          // Surface the upgrade CTA immediately if the limit is already hit,
+          // so the user never fills out the form only to get blocked on submit.
+          await checkOrgLimit()
           setDataLoaded(true)
         }
       } catch (e) {
@@ -156,7 +204,10 @@ export default function OrganizationOnboarding(): React.JSX.Element {
     }
 
     initializeData()
-  }, [orgId])
+    // checkOrgLimit is stable (useCallback on selectedOrgId); including it in deps
+    // so ESLint exhaustive-deps is satisfied without triggering spurious re-runs.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [orgId, checkOrgLimit])
 
   // These useEffects handle state/city loading when user changes selections
   useEffect(() => {
@@ -337,6 +388,9 @@ export default function OrganizationOnboarding(): React.JSX.Element {
           errResult?.statusCode === 403
         ) {
           setSubscriptionRequired(true)
+        } else if (isMarketplaceLimitError(errResult?.code)) {
+          // Plan organization limit reached — offer an upgrade CTA, not a raw error.
+          setLimitCode(errResult.code ?? null)
         } else {
           setFailure(errResult?.message ?? 'Failed to create organization.')
         }
@@ -351,6 +405,20 @@ export default function OrganizationOnboarding(): React.JSX.Element {
 
   if (subscriptionRequired) {
     return <SubscribeRequired />
+  }
+
+  // Org limit detected either on mount (pre-flight) or after a failed submit.
+  // Shown before the form so the user never has to fill it out only to get blocked.
+  if (limitCode) {
+    return (
+      <PageContainer>
+        <div className="flex min-h-screen items-start justify-center p-6">
+          <div className="w-full max-w-[640px]">
+            <PlanLimitNotice code={limitCode} onRefresh={checkOrgLimit} />
+          </div>
+        </div>
+      </PageContainer>
+    )
   }
 
   return (

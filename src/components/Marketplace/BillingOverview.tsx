@@ -306,6 +306,28 @@ export function BillingOverview(): React.JSX.Element {
     loadBilling()
   }, [loadBilling])
 
+  // Reload billing when the user returns from managing their subscription in Microsoft, so
+  // a plan change reflects immediately without a manual reload.
+  useEffect(() => {
+    if (!orgId) {
+      return
+    }
+
+    const onVisible = (): void => {
+      if (document.visibilityState === 'visible') {
+        void loadBilling()
+      }
+    }
+
+    window.addEventListener('focus', onVisible)
+    document.addEventListener('visibilitychange', onVisible)
+
+    return () => {
+      window.removeEventListener('focus', onVisible)
+      document.removeEventListener('visibilitychange', onVisible)
+    }
+  }, [orgId, loadBilling])
+
   const refreshSubscription = async (): Promise<void> => {
     const subscriptionId = entitlements?.subscription?.subscriptionId
 
