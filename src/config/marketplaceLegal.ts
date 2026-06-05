@@ -11,11 +11,11 @@ const envValue = (value: string | undefined, fallback: string): string => {
 export const marketplaceLegal = {
   productName: envValue(
     process.env.NEXT_PUBLIC_MARKETPLACE_PRODUCT_NAME,
-    'Phenix ID Platform',
+    'PHENIX ID',
   ),
   publisherName: envValue(
     process.env.NEXT_PUBLIC_MARKETPLACE_PUBLISHER_NAME,
-    'Phenix',
+    'PHENIX ID',
   ),
   supportEmail: envValue(
     process.env.NEXT_PUBLIC_MARKETPLACE_SUPPORT_EMAIL,

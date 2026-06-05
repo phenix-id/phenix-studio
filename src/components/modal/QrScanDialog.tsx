@@ -102,7 +102,7 @@ const BASE_OVERLAY_CONFIG: Partial<Record<QrScanStatus, OverlayEntry>> = {
     ring: 'green',
     icon: 'check',
     caption: 'Credential received',
-    subtext: 'Stored in the Phenix App',
+    subtext: 'Stored in the PHENIX ID App',
   },
   verified: {
     ring: 'green',
@@ -312,7 +312,7 @@ const QrScanDialog = ({
               <p className="text-[13px] leading-[1.55] text-[rgba(12,12,26,0.55)] dark:text-[rgba(255,255,255,0.55)]">
                 Open your{' '}
                 <strong className="font-[600] text-[#0C0C1A] dark:text-white">
-                  Phenix App
+                  PHENIX ID App
                 </strong>
                 , tap{' '}
                 <strong className="font-[600] text-[#0C0C1A] dark:text-white">
@@ -401,7 +401,7 @@ const QrScanDialog = ({
               <p className="text-center text-[12.5px] text-[rgba(12,12,26,0.55)] dark:text-[rgba(255,255,255,0.45)]">
                 {"Don't have the "}
                 <strong className="font-[600] text-[#0C0C1A] dark:text-white">
-                  Phenix App
+                  PHENIX ID App
                 </strong>
                 {'? Get it free to hold your credentials.'}
               </p>

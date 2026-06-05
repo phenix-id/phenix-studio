@@ -36,7 +36,7 @@ export const viewport: Viewport = {
 }
 
 export const metadata: Metadata = {
-  title: process.env.NEXT_PUBLIC_APP_TITLE?.trim() || 'Phenix Studio',
+  title: process.env.NEXT_PUBLIC_APP_TITLE?.trim() || 'PHENIX ID',
   icons: {
     icon: [{ url: appFaviconPath, type: 'image/png' }],
     shortcut: [{ url: appFaviconPath, type: 'image/png' }],

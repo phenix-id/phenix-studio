@@ -2,7 +2,7 @@ import { marketplaceLegal, privacySections } from '@/config/marketplaceLegal'
 import { LegalPage } from '@/components/Legal/LegalPage'
 
 export const metadata = {
-  title: 'Privacy Policy | Phenix ID Platform',
+  title: 'Privacy Policy | PHENIX ID',
 }
 
 export default function PrivacyPolicyPage(): React.JSX.Element {

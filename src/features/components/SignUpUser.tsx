@@ -5,7 +5,6 @@ import React, { useState } from 'react'
 import EmailVerificationForm from './EmailVerificationForm'
 import Footer from '@/components/Footer'
 import Link from 'next/link'
-import { SubscribeRequired } from '@/components/Marketplace/SubscribeRequired'
 import UserInfoForm from './UserInfoForm'
 import { useSearchParams } from 'next/navigation'
 
@@ -22,22 +21,13 @@ export default function SignUpUser(): React.JSX.Element {
       ? `/sign-in?redirectTo=${encodeURIComponent(redirectTo)}&clientAlias=${clientAlias}`
       : '/sign-in'
 
-  // Net-new buyers must subscribe on Microsoft first; the signup form is only shown
-  // when returning from the marketplace landing (redirectTo points back to it).
+  // Returning from marketplace landing means the user has a purchase token —
+  // show the sign-up form. Otherwise SignUpViewPage already handled the gate.
   const cameFromMarketplace = (redirectTo ?? '').includes(
     '/marketplace/landing',
   )
   const marketplaceRequired =
     process.env.NEXT_PUBLIC_MARKETPLACE_REQUIRED === 'true'
-
-  if (marketplaceRequired && !cameFromMarketplace) {
-    return (
-      <SubscribeRequired
-        title="Subscribe to get started"
-        description="Phenix ID Platform is available through the Microsoft commercial marketplace. Subscribe on Microsoft to get started — after purchase you'll be brought back here to create your account."
-      />
-    )
-  }
 
   return (
     <div className="flex flex-col items-center justify-center">

@@ -2,7 +2,7 @@ import { marketplaceLegal, termsSections } from '@/config/marketplaceLegal'
 import { LegalPage } from '@/components/Legal/LegalPage'
 
 export const metadata = {
-  title: 'Terms of Use | Phenix ID Platform',
+  title: 'Terms of Use | PHENIX ID',
 }
 
 export default function TermsOfUsePage(): React.JSX.Element {
