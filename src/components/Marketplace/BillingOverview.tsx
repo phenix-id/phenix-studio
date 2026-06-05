@@ -7,6 +7,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
+import { Loader2, RefreshCw } from 'lucide-react'
 import {
   MarketplaceEntitlements,
   MarketplaceMeteringEvent,
@@ -80,38 +81,40 @@ function MarketplacePricingCard(): React.JSX.Element {
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Plan ID</TableHead>
-              <TableHead>Plan name</TableHead>
-              <TableHead>Base monthly</TableHead>
-              <TableHead>Issuance</TableHead>
-              <TableHead>Verification</TableHead>
-              <TableHead>Schemas</TableHead>
-              <TableHead>Organizations</TableHead>
-              <TableHead>Users</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {marketplacePlanCatalog.map((plan) => (
-              <TableRow key={plan.planId}>
-                <TableCell>{plan.planId}</TableCell>
-                <TableCell>{plan.planName}</TableCell>
-                <TableCell>{formatUsd(plan.baseMonthlyPriceUsd)}</TableCell>
-                <TableCell>
-                  {formatLimit(plan.includedIssuanceTransactions)}
-                </TableCell>
-                <TableCell>
-                  {formatLimit(plan.includedVerificationTransactions)}
-                </TableCell>
-                <TableCell>{formatLimit(plan.includedSchemas)}</TableCell>
-                <TableCell>{formatLimit(plan.maxOrganizations)}</TableCell>
-                <TableCell>{formatLimit(plan.maxUsers)}</TableCell>
+        <div className="overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Plan ID</TableHead>
+                <TableHead>Plan name</TableHead>
+                <TableHead>Base monthly</TableHead>
+                <TableHead>Issuance</TableHead>
+                <TableHead>Verification</TableHead>
+                <TableHead>Schemas</TableHead>
+                <TableHead>Organizations</TableHead>
+                <TableHead>Users</TableHead>
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+            </TableHeader>
+            <TableBody>
+              {marketplacePlanCatalog.map((plan) => (
+                <TableRow key={plan.planId}>
+                  <TableCell>{plan.planId}</TableCell>
+                  <TableCell>{plan.planName}</TableCell>
+                  <TableCell>{formatUsd(plan.baseMonthlyPriceUsd)}</TableCell>
+                  <TableCell>
+                    {formatLimit(plan.includedIssuanceTransactions)}
+                  </TableCell>
+                  <TableCell>
+                    {formatLimit(plan.includedVerificationTransactions)}
+                  </TableCell>
+                  <TableCell>{formatLimit(plan.includedSchemas)}</TableCell>
+                  <TableCell>{formatLimit(plan.maxOrganizations)}</TableCell>
+                  <TableCell>{formatLimit(plan.maxUsers)}</TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
       </CardContent>
     </Card>
   )
@@ -165,52 +168,93 @@ export function BillingOverview(): React.JSX.Element {
   >([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const manageUrl = process.env.NEXT_PUBLIC_MARKETPLACE_MANAGE_URL
+  // Normalize to null so SSR and client evaluate identically — guards against
+  // an empty-string placeholder in .env.local causing a hydration mismatch
+  // that makes the button disappear after the first render.
+  const manageUrl =
+    process.env.NEXT_PUBLIC_MARKETPLACE_MANAGE_URL?.trim() || null
 
-  const loadBilling = useCallback(async (): Promise<void> => {
-    if (!orgId) {
-      setError('Select an organization to view Marketplace billing.')
-      return
-    }
+  // triggerSyncIfPending — true on the initial page load so we auto-sync with
+  // Microsoft if activation is still pending. Pass false after a manual refresh
+  // to avoid firing the sync endpoint twice in a row.
+  const loadBilling = useCallback(
+    async (triggerSyncIfPending = true): Promise<void> => {
+      if (!orgId) {
+        // Ensure loading is never left stuck when we can't proceed.
+        setLoading(false)
+        setError('Select an organization to view Marketplace billing.')
+        return
+      }
 
-    setLoading(true)
-    setError(null)
+      setLoading(true)
+      setError(null)
 
-    const entitlementsResponse = await getOrgEntitlements(orgId)
-    const entitlementData =
-      extractData<MarketplaceEntitlements>(entitlementsResponse)
+      try {
+        const entitlementsResponse = await getOrgEntitlements(orgId)
+        const entitlementData =
+          extractData<MarketplaceEntitlements>(entitlementsResponse)
 
-    if (!entitlementData) {
-      setError(
-        typeof entitlementsResponse === 'string'
-          ? entitlementsResponse
-          : 'Unable to load Marketplace entitlements.',
-      )
-      setLoading(false)
-      return
-    }
+        if (!entitlementData) {
+          setError(
+            typeof entitlementsResponse === 'string'
+              ? entitlementsResponse
+              : 'Unable to load Marketplace entitlements.',
+          )
+          return
+        }
 
-    setEntitlements(entitlementData)
+        if (entitlementData.subscription?.subscriptionId) {
+          const { subscriptionId } = entitlementData.subscription
+          const subResponse = await getMarketplaceSubscription(subscriptionId)
+          const subData =
+            extractData<MarketplaceSubscriptionSummary>(subResponse)
 
-    if (entitlementData.subscription?.subscriptionId) {
-      const subscriptionResponse = await getMarketplaceSubscription(
-        entitlementData.subscription.subscriptionId,
-      )
-      setSubscription(
-        extractData<MarketplaceSubscriptionSummary>(subscriptionResponse),
-      )
-    }
+          // Auto-sync with Microsoft when the SaaS subscription status has not
+          // yet been confirmed as 'Subscribed' — this covers the gap between
+          // completing Marketplace onboarding and the backend receiving the
+          // Microsoft activation webhook. Note: check saasSubscriptionStatus
+          // (the Microsoft-side status), NOT localActivationStatus which the
+          // backend may already mark as 'activated' before Microsoft confirms.
+          if (
+            triggerSyncIfPending &&
+            subData &&
+            subData.saasSubscriptionStatus !== 'Subscribed'
+          ) {
+            await refreshMarketplaceSubscription(subscriptionId)
+            const [syncedSubRsp, syncedEntRsp] = await Promise.all([
+              getMarketplaceSubscription(subscriptionId),
+              getOrgEntitlements(orgId),
+            ])
+            setSubscription(
+              extractData<MarketplaceSubscriptionSummary>(syncedSubRsp),
+            )
+            setEntitlements(
+              extractData<MarketplaceEntitlements>(syncedEntRsp) ??
+                entitlementData,
+            )
+          } else {
+            setSubscription(subData)
+            setEntitlements(entitlementData)
+          }
+        } else {
+          setEntitlements(entitlementData)
+        }
 
-    const usageResponse = await getOrgUsageSummary(orgId)
-    setUsageSummary(extractData<MarketplaceUsageSummary>(usageResponse))
+        const usageResponse = await getOrgUsageSummary(orgId)
+        setUsageSummary(extractData<MarketplaceUsageSummary>(usageResponse))
 
-    const eventsResponse = await getOrgMeteringEvents(orgId)
-    setMeteringEvents(
-      extractData<MarketplaceMeteringEvent[]>(eventsResponse) || [],
-    )
-
-    setLoading(false)
-  }, [orgId])
+        const eventsResponse = await getOrgMeteringEvents(orgId)
+        setMeteringEvents(
+          extractData<MarketplaceMeteringEvent[]>(eventsResponse) || [],
+        )
+      } finally {
+        // Guaranteed to run on success, early return, or any unexpected throw —
+        // prevents loading from ever getting stuck at true.
+        setLoading(false)
+      }
+    },
+    [orgId],
+  )
 
   useEffect(() => {
     loadBilling()
@@ -218,13 +262,15 @@ export function BillingOverview(): React.JSX.Element {
 
   const refreshSubscription = async (): Promise<void> => {
     const subscriptionId = entitlements?.subscription?.subscriptionId
-    if (!subscriptionId) {
-      return
-    }
 
     setLoading(true)
-    await refreshMarketplaceSubscription(subscriptionId)
-    await loadBilling()
+    // If we have a subscription ID, push an explicit sync to Microsoft first.
+    // If not, just reload — the org's subscription state may have changed.
+    if (subscriptionId) {
+      await refreshMarketplaceSubscription(subscriptionId)
+    }
+    // Pass false so loadBilling skips the auto-sync — we just did it above.
+    await loadBilling(false)
   }
 
   return (
@@ -244,9 +290,14 @@ export function BillingOverview(): React.JSX.Element {
             <Button
               variant="outline"
               onClick={refreshSubscription}
-              disabled={loading || !entitlements?.subscription?.subscriptionId}
+              disabled={loading}
             >
-              Refresh status
+              {loading ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <RefreshCw className="h-4 w-4" />
+              )}
+              {loading ? 'Refreshing…' : 'Refresh status'}
             </Button>
             {manageUrl && (
               <Button asChild>
@@ -262,13 +313,6 @@ export function BillingOverview(): React.JSX.Element {
           <MarketplaceStatusBanner
             subscriptionStatus={entitlements?.subscription?.status}
             blockedReason={error}
-          />
-        )}
-
-        {!error && entitlements && (
-          <MarketplaceStatusBanner
-            subscriptionStatus={entitlements.subscription?.status}
-            blockedReason={entitlements.blockedReason}
           />
         )}
 

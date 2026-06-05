@@ -1,3 +1,4 @@
+/* eslint-disable max-lines */
 import * as yup from 'yup'
 
 import {
@@ -26,6 +27,10 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from '@/components/ui/tooltip'
+import {
+  W3C_SCHEMA_DEFAULT_VERSION,
+  schemaVersionRegex,
+} from '@/config/CommonConstant'
 
 import ActionButtons from './ActionButtons'
 import { AddAttributeSVG } from '@/config/svgs/CreateSchema'
@@ -35,7 +40,6 @@ import ConfirmationModal from './ConfirmationModal'
 import RequiredAndDelete from './RequiredAndDelete'
 import { SchemaType } from '@/common/enums'
 import SchemaVersion from './SchemaVersion'
-import { schemaVersionRegex } from '@/config/CommonConstant'
 
 function FormikData({
   formData,
@@ -132,11 +136,22 @@ function FormikData({
         ...(type === SchemaType.INDY && {
           schemaVersion: yup
             .string()
+            .trim()
             .matches(
               schemaVersionRegex,
               'Enter valid schema version (eg. 0.1 or 0.0.1)',
             )
             .required('Schema version is required.'),
+        }),
+        ...(type === SchemaType.W3C && {
+          schemaVersion: yup
+            .string()
+            .trim()
+            .test(
+              'schema-version',
+              'Enter valid schema version (eg. 1.0 or 1.1)',
+              (value) => !value || schemaVersionRegex.test(value),
+            ),
         }),
         attribute: yup
           .array()
@@ -210,8 +225,11 @@ function FormikData({
                 )}
               </div>
             </div>
-            {type === SchemaType.INDY && (
-              <SchemaVersion formikHandlers={formikHandlers} />
+            {(type === SchemaType.INDY || type === SchemaType.W3C) && (
+              <SchemaVersion
+                formikHandlers={formikHandlers}
+                required={type === SchemaType.INDY}
+              />
             )}
           </div>
           <p className="text-md mt-2 font-normal">
@@ -474,8 +492,15 @@ function FormikData({
               if (showPopup.type === 'create') {
                 confirmCreateSchema()
               } else {
-                formikHandlers.resetForm()
-                setFormData(initFormData)
+                const resetFormData = {
+                  ...initFormData,
+                  schemaVersion:
+                    type === SchemaType.W3C
+                      ? W3C_SCHEMA_DEFAULT_VERSION
+                      : initFormData.schemaVersion,
+                }
+                formikHandlers.resetForm({ values: resetFormData })
+                setFormData(resetFormData)
                 setShowPopup({ show: false, type: 'reset' })
               }
             }}

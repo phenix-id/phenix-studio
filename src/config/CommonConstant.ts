@@ -9,6 +9,7 @@ export const IMG_MAX_HEIGHT = 291
 export const emailRegex = /(\.[a-zA-Z]{2,})$/
 export const CREDENTIAL_CONTEXT_VALUE = 'https://www.w3.org/2018/credentials/v1'
 export const schemaVersionRegex = /^\d{1,5}(?:\.\d{1,5})?(?:\.\d{1,5})?$/
+export const W3C_SCHEMA_DEFAULT_VERSION = '1.0'
 export const proofPurpose = 'assertionMethod'
 export const limitedAttributesLength = 3
 export const itemPerPage = 10
@@ -43,6 +44,7 @@ export const apiStatusCodes = {
   API_STATUS_PARTIALLY_COMPLETED: 206,
   API_STATUS_BAD_REQUEST: 400,
   API_STATUS_UNAUTHORIZED: 401,
+  API_STATUS_CONFLICT: 409,
   API_STATUS_NOT_FOUND: 404,
   API_STATUS_SERVER_ERROR: 500,
 }
