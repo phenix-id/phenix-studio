@@ -23,9 +23,9 @@ export default function MarketplaceSuccessPage(): React.JSX.Element {
               Marketplace subscription activated
             </h1>
             <p className="text-muted-foreground text-sm leading-6">
-              Phenix ID Platform is linked to your organization. You can now
-              continue to the organization workspace and complete wallet, DID,
-              schema, issuance, and verification setup.
+              PHENIX ID is linked to your organization. You can now continue to
+              the organization workspace and complete wallet, DID, schema,
+              issuance, and verification setup.
             </p>
           </div>
           <div className="flex w-full flex-col gap-2 sm:flex-row sm:justify-center">

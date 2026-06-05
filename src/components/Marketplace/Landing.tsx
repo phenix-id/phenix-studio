@@ -255,20 +255,29 @@ export function MarketplaceLanding(): React.JSX.Element {
               </p>
             </div>
             <MarketplaceLegalInfo />
-            <div className="flex items-start gap-3 rounded-lg border p-4">
+            <div
+              className={`flex cursor-pointer items-start gap-3 rounded-lg border-2 p-4 transition-colors ${
+                acceptedTerms
+                  ? 'border-primary bg-primary/5'
+                  : 'border-input hover:border-primary/50 hover:bg-primary/[0.03]'
+              }`}
+              onClick={() => handleTermsAcceptedChange(!acceptedTerms)}
+            >
               <Checkbox
                 id="marketplace-legal-accept"
                 checked={acceptedTerms}
                 onCheckedChange={(checked) =>
                   handleTermsAcceptedChange(checked === true)
                 }
+                className="mt-0.5 size-5 shrink-0"
+                onClick={(e) => e.stopPropagation()}
               />
               <Label
                 htmlFor="marketplace-legal-accept"
-                className="text-sm leading-5 font-normal"
+                className="cursor-pointer text-sm leading-5 font-normal"
               >
                 I have reviewed and accept the Privacy Policy, Terms of Use, and
-                support information for Phenix ID Platform.
+                support information for PHENIX ID.
               </Label>
             </div>
             <Button
@@ -294,7 +303,7 @@ export function MarketplaceLanding(): React.JSX.Element {
           <div className="flex flex-col gap-6 p-8">
             <div>
               <h1 className="text-2xl font-semibold tracking-normal">
-                Continue to Phenix ID Platform
+                Continue to PHENIX ID
               </h1>
               <p className="text-muted-foreground mt-2 text-sm">
                 {accountExists === true
@@ -390,7 +399,7 @@ export function MarketplaceLanding(): React.JSX.Element {
         <div className="flex flex-col gap-6 p-8">
           <div>
             <h1 className="text-2xl font-semibold tracking-normal">
-              Phenix ID Platform
+              PHENIX ID
             </h1>
             <p className="text-muted-foreground mt-2 text-sm">
               Resolving your Microsoft Marketplace subscription and preparing

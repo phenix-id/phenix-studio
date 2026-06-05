@@ -44,7 +44,7 @@ const SelectionDashboardData = (): JSX.Element => {
       heading: 'Email',
       icon: Mail,
       description:
-        'Send a credential offer to a specific holder by email address. They accept in the Phenix App.',
+        'Send a credential offer to a specific holder by email address. They accept in the PHENIX ID App.',
       path: pathRoutes.organizations.Issuance.email,
       tag: 'Single holder',
       tagVariant: 'neutral',
@@ -84,7 +84,7 @@ const SelectionDashboardData = (): JSX.Element => {
       heading: 'Email',
       icon: Mail,
       description:
-        'Send a proof request to a specific holder by email address. They respond in the Phenix App.',
+        'Send a proof request to a specific holder by email address. They respond in the PHENIX ID App.',
       path: pathRoutes.organizations.verification.email,
       tag: 'Single holder',
       tagVariant: 'neutral',
