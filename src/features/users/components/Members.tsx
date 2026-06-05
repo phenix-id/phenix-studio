@@ -163,7 +163,6 @@ export default function Members(): React.JSX.Element {
     }
   }, [
     orgId,
-    orgInfo?.roles,
     invitationsPageState.pageNumber,
     invitationsPageState.pageSize,
     invitationsPageState.search,
@@ -237,32 +236,41 @@ export default function Members(): React.JSX.Element {
     }
   }, [orgId, selectedInvitation, getAllInvitations])
 
+  // Re-run getOrgUserRole when org changes so permission checks always reflect
+  // the currently selected organization.
   useEffect(() => {
     getOrgUserRole()
-  }, [])
+  }, [getOrgUserRole])
 
+  // Fetch users when: org changes, tab switches to users, or users pagination/
+  // search changes. The activeTab guard prevents a double fetch when org changes
+  // while the invitations tab is active.
   useEffect(() => {
-    if (activeTab === 'users') {
+    if (orgId && activeTab === 'users') {
       getAllUsers()
-    } else {
-      getAllInvitations()
     }
-  }, [activeTab])
-
-  useEffect(() => {
-    getAllUsers()
   }, [
+    activeTab,
+    getAllUsers,
+    orgId,
     usersPageState.pageNumber,
     usersPageState.search,
     usersPageState.sortingOrder,
   ])
 
+  // Fetch invitations when: org changes, tab switches to invitations, or
+  // invitations pagination/search changes. Mirror of the users effect above.
   useEffect(() => {
-    getAllInvitations()
+    if (orgId && activeTab !== 'users') {
+      getAllInvitations()
+    }
   }, [
+    activeTab,
+    getAllInvitations,
+    inviteModalOpen,
     invitationsPageState.pageNumber,
     invitationsPageState.search,
-    inviteModalOpen,
+    orgId,
   ])
 
   useEffect(() => {
