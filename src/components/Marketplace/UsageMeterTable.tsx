@@ -48,65 +48,85 @@ export function UsageMeterTable({
 
   return (
     <div className="space-y-6">
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Meter</TableHead>
-            <TableHead>Unit price</TableHead>
-            <TableHead>Included</TableHead>
-            <TableHead>Used</TableHead>
-            <TableHead>Overage</TableHead>
-            <TableHead>Pending</TableHead>
-            <TableHead>Accepted</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {dimensions.map((dimension) => (
-            <TableRow key={dimension.dimension}>
-              <TableCell>
-                <div className="font-medium">{dimension.displayName}</div>
-                <div className="text-muted-foreground text-xs">
-                  {dimension.dimension}
-                </div>
-              </TableCell>
-              <TableCell>
-                {formatUsd(marketplaceMeterUnitPricesUsd[dimension.dimension])}
-              </TableCell>
-              <TableCell>{formatNumber(dimension.included)}</TableCell>
-              <TableCell>{formatNumber(dimension.used)}</TableCell>
-              <TableCell>{formatNumber(dimension.overage)}</TableCell>
-              <TableCell>{formatNumber(dimension.pendingSubmission)}</TableCell>
-              <TableCell>
-                {formatNumber(dimension.acceptedByMicrosoft)}
-              </TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
-
-      {events.length > 0 && (
+      <div className="overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Submitted hour</TableHead>
-              <TableHead>Dimension</TableHead>
-              <TableHead>Quantity</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Message</TableHead>
+              <TableHead>Meter</TableHead>
+              <TableHead>Unit price</TableHead>
+              <TableHead>Included</TableHead>
+              <TableHead>Used</TableHead>
+              <TableHead>Overage</TableHead>
+              <TableHead>Pending</TableHead>
+              <TableHead>Accepted</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {events.map((event) => (
-              <TableRow key={event.id}>
-                <TableCell>{event.usageStartTime}</TableCell>
-                <TableCell>{event.dimension}</TableCell>
-                <TableCell>{formatNumber(event.quantity)}</TableCell>
-                <TableCell>{event.status}</TableCell>
-                <TableCell>{event.marketplaceMessage || '-'}</TableCell>
+            {dimensions.map((dimension) => (
+              <TableRow key={dimension.dimension}>
+                <TableCell>
+                  <div className="font-medium">{dimension.displayName}</div>
+                  <div className="text-muted-foreground text-xs">
+                    {dimension.dimension}
+                  </div>
+                </TableCell>
+                <TableCell>
+                  {formatUsd(
+                    marketplaceMeterUnitPricesUsd[dimension.dimension],
+                  )}
+                </TableCell>
+                <TableCell>{formatNumber(dimension.included)}</TableCell>
+                <TableCell>{formatNumber(dimension.used)}</TableCell>
+                <TableCell>{formatNumber(dimension.overage)}</TableCell>
+                <TableCell>
+                  {formatNumber(dimension.pendingSubmission)}
+                </TableCell>
+                <TableCell>
+                  {formatNumber(dimension.acceptedByMicrosoft)}
+                </TableCell>
               </TableRow>
             ))}
           </TableBody>
         </Table>
+      </div>
+
+      {events.length > 0 && (
+        <div className="overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="whitespace-nowrap">
+                  Submitted hour
+                </TableHead>
+                <TableHead>Dimension</TableHead>
+                <TableHead>Quantity</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Message</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {events.map((event) => (
+                <TableRow key={event.id}>
+                  <TableCell className="whitespace-nowrap">
+                    {event.usageStartTime}
+                  </TableCell>
+                  <TableCell>{event.dimension}</TableCell>
+                  <TableCell>{formatNumber(event.quantity)}</TableCell>
+                  <TableCell>{event.status}</TableCell>
+                  {/* Truncate long API messages — hover to read the full string */}
+                  <TableCell className="max-w-[280px]">
+                    <p
+                      className="truncate text-sm"
+                      title={event.marketplaceMessage || undefined}
+                    >
+                      {event.marketplaceMessage || '-'}
+                    </p>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
       )}
     </div>
   )
