@@ -8,6 +8,13 @@ import {
   getMarketplaceOnboardingSession,
   linkMarketplaceAccount,
 } from '@/app/api/marketplace'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { AxiosResponse } from 'axios'
@@ -16,6 +23,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { MarketplacePlanSummary } from './MarketplacePlanSummary'
 import { Textarea } from '@/components/ui/textarea'
+import { getOrganizations } from '@/app/api/organization'
 import { pathRoutes } from '@/config/pathRoutes'
 import { setOrgId } from '@/lib/orgSlice'
 import { useAppDispatch } from '@/lib/hooks'
@@ -26,6 +34,20 @@ const ONBOARDING_SESSION_KEY = 'marketplaceOnboardingSessionId'
 interface OrganizationLinkResponse {
   orgId?: string
   organizationId?: string
+}
+
+interface OwnedOrganization {
+  id: string
+  name: string
+}
+
+// Org list rows expose roles via userOrgRoles[].orgRole.name; we only offer orgs the
+// signed-in user owns. The backend re-verifies ownership on link_existing — this filter
+// is just so the picker doesn't show orgs the user can't actually link.
+interface OrgListRow {
+  id: string
+  name: string
+  userOrgRoles?: { orgRole?: { name?: string } }[]
 }
 
 function extractData<T>(response: AxiosResponse | string): T | null {
@@ -50,6 +72,11 @@ export function OnboardingWizard(): React.JSX.Element {
   const [accountLinked, setAccountLinked] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  // Organizations the signed-in user owns, offered for reuse so a returning buyer
+  // (plan change / cancel + re-subscribe) doesn't have to create a duplicate org.
+  const [ownedOrgs, setOwnedOrgs] = useState<OwnedOrganization[]>([])
+  const [orgMode, setOrgMode] = useState<'existing' | 'create'>('create')
+  const [selectedExistingOrgId, setSelectedExistingOrgId] = useState('')
   const autoLinkRef = useRef(false)
 
   const sessionId =
@@ -128,34 +155,99 @@ export function OnboardingWizard(): React.JSX.Element {
     autoLink()
   }, [sessionId, sessionState, session, loadSession])
 
-  const createOrganizationAndActivate = async (): Promise<void> => {
-    if (!sessionId || !orgName.trim()) {
-      setError('Organization name is required.')
+  // Once the account is linked and no org is linked to this subscription yet, load the
+  // user's owned organizations so they can reuse one instead of being forced to create a
+  // new org (the bug when changing plan / cancelling + re-subscribing).
+  useEffect(() => {
+    const loadOwnedOrgs = async (): Promise<void> => {
+      if (!accountLinked || orgId) {
+        return
+      }
+
+      const response = await getOrganizations(1, 100, '')
+      if (typeof response === 'string') {
+        return
+      }
+
+      const rows =
+        ((response.data as { data?: { organizations?: OrgListRow[] } }).data
+          ?.organizations as OrgListRow[]) || []
+      const owned = rows
+        .filter((row) =>
+          (row.userOrgRoles || []).some(
+            (role) => role.orgRole?.name?.toLowerCase() === 'owner',
+          ),
+        )
+        .map((row) => ({ id: row.id, name: row.name }))
+
+      setOwnedOrgs(owned)
+      if (owned.length > 0) {
+        setOrgMode('existing')
+        setSelectedExistingOrgId(owned[0].id)
+      }
+    }
+
+    loadOwnedOrgs()
+  }, [accountLinked, orgId])
+
+  // Link the chosen org (existing or newly created) to the subscription, then activate.
+  const linkAndActivate = async (): Promise<void> => {
+    if (!sessionId) {
       return
     }
 
     setLoading(true)
     setError(null)
 
-    const createResponse = await createMarketplaceOrganization(sessionId, {
-      mode: 'create',
-      organization: {
-        name: orgName.trim(),
-        description: orgDescription.trim() || undefined,
-        website: orgWebsite.trim() || undefined,
-      },
-    })
-    const created = extractData<OrganizationLinkResponse>(createResponse)
-    const linkedOrgId = created?.orgId || created?.organizationId
+    let linkedOrgId: string | undefined = undefined
 
-    if (!linkedOrgId) {
-      setError(
-        typeof createResponse === 'string'
-          ? createResponse
-          : 'Organization was not linked to the Marketplace subscription.',
-      )
-      setLoading(false)
-      return
+    if (orgMode === 'existing') {
+      if (!selectedExistingOrgId) {
+        setError('Select an organization to link.')
+        setLoading(false)
+        return
+      }
+
+      const linkResponse = await createMarketplaceOrganization(sessionId, {
+        mode: 'link_existing',
+        orgId: selectedExistingOrgId,
+      })
+      const linked = extractData<OrganizationLinkResponse>(linkResponse)
+      linkedOrgId =
+        linked?.orgId || linked?.organizationId || selectedExistingOrgId
+
+      if (typeof linkResponse === 'string') {
+        setError(linkResponse)
+        setLoading(false)
+        return
+      }
+    } else {
+      if (!orgName.trim()) {
+        setError('Organization name is required.')
+        setLoading(false)
+        return
+      }
+
+      const createResponse = await createMarketplaceOrganization(sessionId, {
+        mode: 'create',
+        organization: {
+          name: orgName.trim(),
+          description: orgDescription.trim() || undefined,
+          website: orgWebsite.trim() || undefined,
+        },
+      })
+      const created = extractData<OrganizationLinkResponse>(createResponse)
+      linkedOrgId = created?.orgId || created?.organizationId
+
+      if (!linkedOrgId) {
+        setError(
+          typeof createResponse === 'string'
+            ? createResponse
+            : 'Organization was not linked to the Marketplace subscription.',
+        )
+        setLoading(false)
+        return
+      }
     }
 
     setLocalOrgId(linkedOrgId)
@@ -290,59 +382,123 @@ export function OnboardingWizard(): React.JSX.Element {
               <div>
                 <p className="font-semibold">Your organization</p>
                 <p className="text-muted-foreground mt-0.5 text-sm">
-                  Create the buyer organization for this subscription.
-                  We&apos;ll link it and activate billing in a single step.
+                  {ownedOrgs.length > 0
+                    ? 'Link an organization you already own to this subscription, or create a new one. We’ll link it and activate billing in a single step.'
+                    : 'Create the buyer organization for this subscription. We’ll link it and activate billing in a single step.'}
                 </p>
               </div>
-              <div className="grid gap-2">
-                <Label htmlFor="marketplace-org-name">
-                  Organization name{' '}
-                  <span className="text-destructive text-xs">*</span>
-                </Label>
-                <Input
-                  id="marketplace-org-name"
-                  value={orgName}
-                  onChange={(e) => setOrgName(e.target.value)}
-                  placeholder="Acme University"
-                  disabled={loading}
-                />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="marketplace-org-website">Website</Label>
-                <Input
-                  id="marketplace-org-website"
-                  value={orgWebsite}
-                  onChange={(e) => setOrgWebsite(e.target.value)}
-                  placeholder="https://acme.example"
-                  disabled={loading}
-                />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="marketplace-org-description">Description</Label>
-                <Textarea
-                  id="marketplace-org-description"
-                  value={orgDescription}
-                  onChange={(e) => setOrgDescription(e.target.value)}
-                  placeholder="Issuer and verifier organization"
-                  disabled={loading}
-                  rows={3}
-                />
-              </div>
+
+              {ownedOrgs.length > 0 && (
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    variant={orgMode === 'existing' ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setOrgMode('existing')}
+                    disabled={loading}
+                  >
+                    Use existing organization
+                  </Button>
+                  <Button
+                    type="button"
+                    variant={orgMode === 'create' ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setOrgMode('create')}
+                    disabled={loading}
+                  >
+                    Create new organization
+                  </Button>
+                </div>
+              )}
+
+              {orgMode === 'existing' && ownedOrgs.length > 0 ? (
+                <div className="grid gap-2">
+                  <Label htmlFor="marketplace-existing-org">
+                    Organization{' '}
+                    <span className="text-destructive text-xs">*</span>
+                  </Label>
+                  <Select
+                    value={selectedExistingOrgId}
+                    onValueChange={setSelectedExistingOrgId}
+                    disabled={loading}
+                  >
+                    <SelectTrigger id="marketplace-existing-org">
+                      <SelectValue placeholder="Select an organization" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {ownedOrgs.map((org) => (
+                        <SelectItem key={org.id} value={org.id}>
+                          {org.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              ) : (
+                <>
+                  <div className="grid gap-2">
+                    <Label htmlFor="marketplace-org-name">
+                      Organization name{' '}
+                      <span className="text-destructive text-xs">*</span>
+                    </Label>
+                    <Input
+                      id="marketplace-org-name"
+                      value={orgName}
+                      onChange={(e) => setOrgName(e.target.value)}
+                      placeholder="Acme University"
+                      disabled={loading}
+                    />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="marketplace-org-website">Website</Label>
+                    <Input
+                      id="marketplace-org-website"
+                      value={orgWebsite}
+                      onChange={(e) => setOrgWebsite(e.target.value)}
+                      placeholder="https://acme.example"
+                      disabled={loading}
+                    />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="marketplace-org-description">
+                      Description
+                    </Label>
+                    <Textarea
+                      id="marketplace-org-description"
+                      value={orgDescription}
+                      onChange={(e) => setOrgDescription(e.target.value)}
+                      placeholder="Issuer and verifier organization"
+                      disabled={loading}
+                      rows={3}
+                    />
+                  </div>
+                </>
+              )}
+
               <div className="flex items-start gap-3 rounded-lg border border-amber-500/40 bg-amber-500/10 p-4">
                 <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-500" />
                 <p className="text-sm text-amber-500/90">
-                  Creating your organization activates this Microsoft
-                  Marketplace subscription and starts billing.
+                  {orgMode === 'existing'
+                    ? 'Linking your organization activates this Microsoft Marketplace subscription and starts billing.'
+                    : 'Creating your organization activates this Microsoft Marketplace subscription and starts billing.'}
                 </p>
               </div>
               <Button
-                onClick={createOrganizationAndActivate}
-                disabled={loading || !accountLinked || !orgName.trim()}
+                onClick={linkAndActivate}
+                disabled={
+                  loading ||
+                  !accountLinked ||
+                  (orgMode === 'existing'
+                    ? !selectedExistingOrgId
+                    : !orgName.trim())
+                }
               >
                 {loading && (
                   <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />
                 )}
-                Create organization & activate subscription
+                {orgMode === 'existing'
+                  ? 'Link organization & activate subscription'
+                  : 'Create organization & activate subscription'}
               </Button>
               {!accountLinked && (
                 <p className="text-muted-foreground text-xs">

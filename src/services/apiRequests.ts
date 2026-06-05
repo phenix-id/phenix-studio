@@ -4,8 +4,42 @@ import {
   EcosystemInstance as ecosystemAxiosUser,
 } from './axiosIntercepter'
 
+import {
+  isMarketplaceToastCode,
+  marketplaceCodeMessage,
+} from '@/config/marketplaceErrors'
+
 import { HeaderConfig } from '@/config/GetHeaderConfigs'
 import { store } from '@/lib/store'
+import { toast } from 'sonner'
+
+const MARKETPLACE_MANAGE_URL = process.env.NEXT_PUBLIC_MARKETPLACE_MANAGE_URL
+
+// Surface a single "manage subscription" CTA for mid-workflow marketplace gates
+// (issuance / verification / schema limits, suspended/unsubscribed, …) that don't have a
+// dedicated inline notice in their flow. Deduped per code so repeated attempts replace
+// rather than stack. Org/user/subscribe codes are handled inline and skipped here.
+const notifyMarketplaceGate = (code?: string, message?: string): void => {
+  if (!isMarketplaceToastCode(code)) {
+    return
+  }
+
+  toast.error(marketplaceCodeMessage(code, message), {
+    id: code,
+    duration: 8000,
+    action: MARKETPLACE_MANAGE_URL
+      ? {
+          label: 'Manage subscription',
+          onClick: () =>
+            window.open(
+              MARKETPLACE_MANAGE_URL,
+              '_blank',
+              'noopener,noreferrer',
+            ),
+        }
+      : undefined,
+  })
+}
 
 export interface APIParameters {
   url: string
@@ -28,6 +62,7 @@ const HandleResponse = (
     }
     error.statusCode = responseData.status
     error.code = body?.code
+    notifyMarketplaceGate(body?.code, body?.message)
     return Promise.reject(error)
   }
   return Promise.reject(

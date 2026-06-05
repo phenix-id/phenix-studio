@@ -37,8 +37,10 @@ import { Label } from '@/components/ui/label'
 import Loader from '@/components/Loader'
 import LogoUploader from './LogoUploader'
 import PageContainer from '@/components/layout/page-container'
+import { PlanLimitNotice } from '@/components/Marketplace/PlanLimitNotice'
 import Stepper from '@/components/StepperComponent'
 import { SubscribeRequired } from '@/components/Marketplace/SubscribeRequired'
+import { isMarketplaceLimitError } from '@/config/marketplaceErrors'
 import { apiStatusCodes } from '@/config/CommonConstant'
 import { hardNavigate } from '@/utils/navigation'
 import { useAppDispatch } from '@/lib/hooks'
@@ -79,6 +81,9 @@ export default function OrganizationOnboarding(): React.JSX.Element {
   const [orgData, setOrgData] = useState<IOrgFormValues | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
   const [failure, setFailure] = useState<string | null>(null)
+  // Set when org creation is rejected because the plan's organization limit is reached,
+  // so we can offer an upgrade CTA instead of a dead-end error.
+  const [limitCode, setLimitCode] = useState<string | null>(null)
   const [isEditMode, setIsEditMode] = useState<boolean>(false)
   const [loading, setLoading] = useState<boolean>(false)
   const [createLoading, setCreateLoading] = useState<boolean>(false)
@@ -337,6 +342,9 @@ export default function OrganizationOnboarding(): React.JSX.Element {
           errResult?.statusCode === 403
         ) {
           setSubscriptionRequired(true)
+        } else if (isMarketplaceLimitError(errResult?.code)) {
+          // Plan organization limit reached — offer an upgrade CTA, not a raw error.
+          setLimitCode(errResult.code ?? null)
         } else {
           setFailure(errResult?.message ?? 'Failed to create organization.')
         }
@@ -391,6 +399,14 @@ export default function OrganizationOnboarding(): React.JSX.Element {
                       setSuccess(null)
                     }
                   }}
+                />
+              </div>
+            )}
+            {limitCode && (
+              <div className="w-full">
+                <PlanLimitNotice
+                  code={limitCode}
+                  onRefresh={() => setLimitCode(null)}
                 />
               </div>
             )}
