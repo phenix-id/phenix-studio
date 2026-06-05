@@ -1,6 +1,6 @@
+/* eslint-disable sort-imports */
 'use client'
 
-import { Card, CardContent } from '@/components/ui/card'
 import { DataType, Ledgers, Network, PolygonNetworks } from '@/common/enums'
 import {
   IAttributes,
@@ -8,16 +8,11 @@ import {
   ISchemaData,
 } from '../type/schemas-interface'
 import React, { useState } from 'react'
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from '@/components/ui/tooltip'
+import { Check, ChevronRight, ShieldCheck } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import CustomCheckbox from '@/components/CustomCheckbox'
 import DateTooltip from '@/components/DateTooltip'
 import Loader from '@/components/Loader'
-import { ShieldCheck } from 'lucide-react'
 import { dateConversion } from '@/utils/DateConversion'
 import { hardNavigate } from '@/utils/navigation'
 import { limitedAttributesLength } from '@/config/CommonConstant'
@@ -25,35 +20,6 @@ import { pathRoutes } from '@/config/pathRoutes'
 import { setSchemaDetails } from '@/lib/schemaStorageSlice'
 import { useAppDispatch } from '@/lib/hooks'
 import { usePathname } from 'next/navigation'
-
-const AttributesList: React.FC<{
-  readonly attributes: IAttributes[]
-  readonly limitedAttributes?: boolean
-}> = ({ attributes, limitedAttributes }) => {
-  const isLimited =
-    limitedAttributes !== false &&
-    Array.isArray(attributes) &&
-    attributes.length > limitedAttributesLength
-
-  const displayedAttributes = isLimited
-    ? attributes.slice(0, limitedAttributesLength)
-    : (attributes ?? [])
-
-  return (
-    <div className="text-foreground flex flex-wrap items-center text-base font-semibold">
-      <span className="mr-2">Attributes:</span>
-      {displayedAttributes.map((element) => (
-        <span
-          key={element.attributeName}
-          className="bg-secondary text-secondary-foreground hover:bg-secondary/80 m-1 mr-2 rounded px-2.5 py-0.5 text-sm font-medium shadow-sm transition-colors"
-        >
-          {element.attributeName}
-        </span>
-      ))}
-      {isLimited && <span className="text-muted-foreground ml-2">...</span>}
-    </div>
-  )
-}
 
 const SchemaCard = (props: Readonly<ISchemaCardProps>): React.JSX.Element => {
   const [isSelected, setIsSelected] = useState(false)
@@ -63,6 +29,7 @@ const SchemaCard = (props: Readonly<ISchemaCardProps>): React.JSX.Element => {
   const isVerificationPage = pathname.includes('verification')
   const dispatch = useAppDispatch()
 
+  // Resolve a human-readable ledger label from the issuer DID
   let ledgerDisplay: string | undefined = undefined
   if (props.issuerDid?.includes(Ledgers.POLYGON)) {
     ledgerDisplay = props.issuerDid.includes(Network.TESTNET)
@@ -130,8 +97,7 @@ const SchemaCard = (props: Readonly<ISchemaCardProps>): React.JSX.Element => {
   )
 
   const handleCardClick = (): void => {
-    // On verification pages with a selectable schema — toggle selection on the
-    // whole card instead of relying on the hidden checkbox.
+    // Verification pages with checkbox enabled — toggle selection on the card
     if (isVerificationPage && props.showCheckbox && !hasNestedAttributes) {
       const newSelected = !isSelected
       setIsSelected(newSelected)
@@ -166,28 +132,82 @@ const SchemaCard = (props: Readonly<ISchemaCardProps>): React.JSX.Element => {
     }
   }
 
+  // Selectable: verification page + checkbox enabled + no nested attrs
   const isSelectable =
     isVerificationPage && props.showCheckbox && !hasNestedAttributes
 
+  // Navigable: INDY schemas on non-verification pages (clicking goes to detail)
+  const isNavigable =
+    !isVerificationPage &&
+    !props.w3cSchema &&
+    !hasNestedAttributes &&
+    props.isClickable !== false
+
+  // Either mode makes the card interactive (cursor + focus ring + hover lift)
+  const isInteractive = isSelectable || isNavigable
+
+  // Attribute pills — cap at limitedAttributesLength, show "+N more" for overflow
+  const displayedAttributes: IAttributes[] = Array.isArray(props.attributes)
+    ? props.attributes.slice(0, limitedAttributesLength)
+    : []
+  const extraCount = Array.isArray(props.attributes)
+    ? Math.max(0, props.attributes.length - limitedAttributesLength)
+    : 0
+
+  // Whether to show the Issue button in the footer
+  const showIssueButton =
+    !isVerificationPage &&
+    props.w3cSchema &&
+    !props.isVerification &&
+    !props.isVerificationUsingEmail
+
   return (
-    <Card
+    <div
+      role={isInteractive ? 'button' : undefined}
+      tabIndex={isInteractive ? 0 : undefined}
+      onClick={handleCardClick}
+      onKeyDown={
+        isInteractive
+          ? (e: React.KeyboardEvent<HTMLDivElement>): void => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault()
+                handleCardClick()
+              }
+            }
+          : undefined
+      }
       className={[
-        'relative h-full w-full overflow-hidden rounded-xl shadow-xl transition-all duration-200',
-        isSelectable
-          ? 'cursor-pointer'
-          : props.w3cSchema || props.isClickable === false || isVerificationPage
-            ? 'cursor-default'
-            : 'cursor-pointer hover:scale-[1.02] hover:shadow-lg',
-        // Purple selection highlight — solid border + glow when selected
+        'group relative flex flex-col rounded-[14px] border-[0.5px] p-5',
+        'bg-card text-card-foreground',
+        'transition-[transform,border-color,box-shadow] duration-200',
+        isInteractive
+          ? 'cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(87,29,247,0.6)] focus-visible:ring-offset-2'
+          : 'cursor-default',
         isSelected && isSelectable
           ? 'border-[rgba(87,29,247,0.70)] shadow-[0_0_0_2px_rgba(87,29,247,0.20),0_8px_32px_rgba(87,29,247,0.18)]'
-          : '',
+          : isInteractive
+            ? 'border-[var(--border)] hover:-translate-y-[3px] hover:border-[rgba(87,29,247,0.40)] hover:shadow-[0_12px_30px_rgba(87,29,247,0.12)]'
+            : 'border-[var(--border)] hover:border-[rgba(87,29,247,0.30)] hover:shadow-[0_4px_16px_rgba(87,29,247,0.07)]',
         hasNestedAttributes ? 'pointer-events-none opacity-80' : '',
-      ].join(' ')}
-      onClick={handleCardClick}
+      ]
+        .filter(Boolean)
+        .join(' ')}
     >
+      {/* Radial gradient hover wash — gives the card a purple top-right glow on hover */}
+      {!isSelected && isInteractive && (
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0 rounded-[14px] opacity-0 transition-opacity duration-200 group-hover:opacity-100"
+          style={{
+            background:
+              'radial-gradient(ellipse 55% 65% at 100% 0%, rgba(87,29,247,0.07) 0%, transparent 70%)',
+          }}
+        />
+      )}
+
+      {/* Nested-attribute overlay — schema is API-only, not usable from the UI */}
       {hasNestedAttributes && (
-        <div className="bg-background/80 absolute inset-0 z-10 flex items-center justify-center">
+        <div className="bg-background/80 absolute inset-0 z-10 flex items-center justify-center rounded-[14px]">
           <div className="bg-secondary text-secondary-foreground rounded-md p-4 text-center text-sm shadow-lg">
             This schema can only be used through the API as it contains nested
             objects.
@@ -195,120 +215,154 @@ const SchemaCard = (props: Readonly<ISchemaCardProps>): React.JSX.Element => {
         </div>
       )}
 
-      <CardContent className="space-y-4 p-4 sm:p-6">
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-          <div className="w-full sm:max-w-[60%]">
-            <h3 className="text-foreground text-xl font-bold break-words">
-              {props.schemaName}
-            </h3>
-            <p className="text-muted-foreground text-sm">
-              Version: {props.version}
-            </p>
-          </div>
+      {/* ── Top row: type badge + date ── */}
+      <div className="relative flex items-center justify-between gap-2">
+        <span
+          className={
+            props.w3cSchema
+              ? 'rounded-md border border-[rgba(87,29,247,0.20)] bg-[#F2ECFF] px-[7px] py-[2px] text-[10px] font-[700] tracking-[0.05em] text-[#571DF7] uppercase dark:bg-[rgba(87,29,247,0.20)] dark:text-[#9E6BFB]'
+              : 'bg-secondary text-secondary-foreground rounded-md border px-[7px] py-[2px] text-[10px] font-[700] tracking-[0.05em] uppercase'
+          }
+        >
+          {props.w3cSchema ? 'W3C' : 'INDY'}
+        </span>
+        <DateTooltip date={props.created}>
+          <span className="text-muted-foreground text-[11px]">
+            {dateConversion(props.created)}
+          </span>
+        </DateTooltip>
+      </div>
 
-          <div className="flex flex-wrap items-center gap-2 text-sm sm:justify-end sm:text-right">
-            {props.w3cSchema && (
-              <span className="focus:ring-ring text-foreground flex items-center gap-1 rounded-lg border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:ring-2 focus:ring-offset-2 focus:outline-none">
-                W3C
-              </span>
-            )}
-            <DateTooltip date={props.created}>
-              <span className="text-muted-foreground">
-                Created: {dateConversion(props.created)}
-              </span>
-            </DateTooltip>
-          </div>
-        </div>
+      {/* ── Schema name + version ── */}
+      <h3 className="text-foreground relative mt-3 font-serif text-[15px] leading-tight font-[700] tracking-[-0.01em]">
+        {props.schemaName}
+      </h3>
+      <p className="text-muted-foreground relative mt-0.5 text-[11.5px]">
+        Version: {props.version}
+      </p>
 
-        <div className="min-w-0 space-y-1 text-sm">
-          <button
-            className="url-link flex items-start sm:items-center"
-            onClick={props.onTitleClick}
+      {/* ── Schema ID — clicking opens the side panel, not the card action ── */}
+      <button
+        type="button"
+        className="url-link relative mt-3 flex w-full items-center gap-1.5 text-left"
+        onClick={(e) => {
+          e.stopPropagation()
+          props.onTitleClick?.(e)
+        }}
+      >
+        <strong className="text-foreground shrink-0 text-[12px] font-[600]">
+          ID:
+        </strong>
+        <span className="text-muted-foreground min-w-0 truncate font-mono text-[11px]">
+          {props.schemaId}
+        </span>
+      </button>
+
+      {/* ── Issuer ── */}
+      <p className="text-muted-foreground relative mt-1 text-[12px]">
+        <strong className="text-foreground font-[600]">Issuer:</strong>{' '}
+        {props.issuerName || ''}
+      </p>
+
+      {/* ── Ledger (only for DID methods that carry one) ── */}
+      {!props.noLedger && ledgerDisplay && (
+        <p className="text-muted-foreground relative mt-0.5 text-[12px]">
+          <strong className="text-foreground font-[600]">Ledger:</strong>{' '}
+          {ledgerDisplay}
+        </p>
+      )}
+
+      {/* ── Attribute pills ── */}
+      <div className="relative mt-3 flex flex-wrap gap-1.5">
+        {displayedAttributes.map((attr: IAttributes) => (
+          <span
+            key={attr.attributeName}
+            className="bg-secondary text-secondary-foreground rounded px-2 py-[2px] text-[11px] font-medium"
           >
-            <strong className="mr-2 shrink-0">Schema ID:</strong>
-            <div className="!url-link min-w-0 font-mono text-sm">
-              {props.schemaId || ''}
-            </div>
-          </button>
-
-          <div className="flex items-start sm:items-center">
-            <strong className="mr-2 shrink-0">Issuer:</strong>
-            <div className="min-w-0 truncate">{props.issuerName || ''}</div>
-          </div>
-
-          {!props.noLedger && (
-            <div className="flex items-center">
-              <strong className="mr-2 shrink-0">Ledger:</strong>
-              <span className="text-foreground truncate text-sm">
-                {ledgerDisplay}
-              </span>
-            </div>
-          )}
-        </div>
-
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <div>
-                <AttributesList
-                  attributes={props.attributes}
-                  limitedAttributes={props.limitedAttributes}
-                />
-              </div>
-            </TooltipTrigger>
-            <TooltipContent
-              side="bottom"
-              sideOffset={4}
-              className="break-words whitespace-normal"
-            >
-              <pre className="block font-semibold break-words whitespace-normal">
-                {props.attributes
-                  .map((val: { attributeName: string }) => val.attributeName)
-                  .join(', ')}
-              </pre>
-            </TooltipContent>
-          </Tooltip>
-
-          {props.w3cSchema &&
-            !props.isVerification &&
-            !props.isVerificationUsingEmail && (
-              <Button
-                onClick={() => {
-                  setIsLoading(true)
-                  handleButtonClick()
-                }}
-                className="h-8 w-full sm:w-auto"
-                variant="outline"
-                disabled={isLoading}
-              >
-                {isLoading ? (
-                  <Loader size={16} />
-                ) : (
-                  <>
-                    <ShieldCheck className="mr-1 h-4 w-4" />
-                    Issue
-                  </>
-                )}
-              </Button>
-            )}
-        </div>
-
-        {/* Checkbox rendered only outside verification pages — on verification
-            pages the whole card is clickable and the tick badge replaces it. */}
-        {props.showCheckbox && !hasNestedAttributes && !isVerificationPage && (
-          <CustomCheckbox
-            isSelectedSchema={Boolean(isSelected)}
-            onChange={handleCheckboxChange}
-            showCheckbox={props.showCheckbox}
-            schemaData={{
-              schemaId: props.schemaId,
-              schemaName: props.schemaName,
-              attributes: props.attributes,
-            }}
-          />
+            {attr.attributeName}
+          </span>
+        ))}
+        {extraCount > 0 && (
+          <span className="text-muted-foreground ml-0.5 text-[11px]">
+            +{extraCount} more
+          </span>
         )}
-      </CardContent>
-    </Card>
+      </div>
+
+      {/* ── Footer ── */}
+      <div className="relative mt-4 flex items-center justify-between border-t border-[rgba(87,29,247,0.08)] pt-3">
+        {/* Left label */}
+        {isSelectable ? (
+          <span
+            className={`text-[11px] font-[600] transition-colors duration-200 ${
+              isSelected
+                ? 'text-[#571DF7]'
+                : 'text-muted-foreground/50 group-hover:text-[#571DF7]'
+            }`}
+          >
+            {isSelected ? 'Selected' : 'Click to select'}
+          </span>
+        ) : isNavigable ? (
+          <span className="text-muted-foreground/50 text-[11px] font-[600] transition-colors duration-200 group-hover:text-[#571DF7]">
+            View details
+          </span>
+        ) : (
+          // W3C schemas — left side empty; Issue button is on the right
+          <span />
+        )}
+
+        {/* Right action */}
+        {isSelectable ? (
+          isSelected ? (
+            <span className="flex h-[22px] w-[22px] items-center justify-center rounded-full bg-[#571DF7]">
+              <Check className="h-3 w-3 text-white" strokeWidth={2.5} />
+            </span>
+          ) : (
+            <span className="text-muted-foreground/50 text-[12.5px] font-[600] transition-colors duration-200 group-hover:text-[#571DF7]">
+              Select →
+            </span>
+          )
+        ) : isNavigable ? (
+          <ChevronRight className="text-muted-foreground/50 h-4 w-4 transition-colors duration-200 group-hover:text-[#571DF7]" />
+        ) : showIssueButton ? (
+          <Button
+            onClick={(e) => {
+              e.stopPropagation()
+              setIsLoading(true)
+              handleButtonClick()
+            }}
+            className="h-7 gap-1 text-[11px]"
+            variant="outline"
+            size="sm"
+            disabled={isLoading}
+          >
+            {isLoading ? (
+              <Loader size={14} />
+            ) : (
+              <>
+                <ShieldCheck className="h-3.5 w-3.5" />
+                Issue
+              </>
+            )}
+          </Button>
+        ) : null}
+      </div>
+
+      {/* Legacy checkbox — kept for non-verification selection contexts where
+          showCheckbox=true is passed (e.g. credential issuance schema pick). */}
+      {props.showCheckbox && !hasNestedAttributes && !isVerificationPage && (
+        <CustomCheckbox
+          isSelectedSchema={Boolean(isSelected)}
+          onChange={handleCheckboxChange}
+          showCheckbox={props.showCheckbox}
+          schemaData={{
+            schemaId: props.schemaId,
+            schemaName: props.schemaName,
+            attributes: props.attributes,
+          }}
+        />
+      )}
+    </div>
   )
 }
 
