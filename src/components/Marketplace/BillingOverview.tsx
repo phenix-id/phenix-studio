@@ -49,6 +49,51 @@ function extractData<T>(response: AxiosResponse | string): T | null {
   return envelope.data || null
 }
 
+// Bounded poll settings for the post-subscribe status sync. The backend may not
+// report 'Subscribed' on the very next read after a /refresh (read-after-write
+// lag or an asynchronous Microsoft sync), so we re-read a few times before
+// giving up. Worst case only applies while a subscription is still pending.
+const STATUS_POLL_ATTEMPTS = 4
+const STATUS_POLL_DELAY_MS = 1500
+
+const sleep = (ms: number): Promise<void> =>
+  new Promise<void>((resolve) => {
+    setTimeout(resolve, ms)
+  })
+
+// Force a Microsoft sync, then re-read the subscription a few times until it
+// reports 'Subscribed'. Robust whether the backend /refresh is synchronous
+// (the first read settles it) or asynchronous/lagging (a later read does).
+// Returns the freshest subscription summary observed, or null if every read
+// failed. Stops early the moment the status settles.
+const syncUntilSettled = async (
+  subscriptionId: string,
+): Promise<MarketplaceSubscriptionSummary | null> => {
+  await refreshMarketplaceSubscription(subscriptionId)
+
+  let latest: MarketplaceSubscriptionSummary | null = null
+
+  for (let attempt = 0; attempt < STATUS_POLL_ATTEMPTS; attempt += 1) {
+    const response = await getMarketplaceSubscription(subscriptionId)
+    const data = extractData<MarketplaceSubscriptionSummary>(response)
+
+    if (data) {
+      latest = data
+      if (data.saasSubscriptionStatus === 'Subscribed') {
+        break
+      }
+    }
+
+    // Not settled yet — wait before the next read (skip the wait on the last
+    // attempt since we're about to return regardless).
+    if (attempt < STATUS_POLL_ATTEMPTS - 1) {
+      await sleep(STATUS_POLL_DELAY_MS)
+    }
+  }
+
+  return latest
+}
+
 const formatLimit = (value?: number | null): string => {
   if (value === null || value === undefined) {
     return '-'
@@ -220,14 +265,15 @@ export function BillingOverview(): React.JSX.Element {
             subData &&
             subData.saasSubscriptionStatus !== 'Subscribed'
           ) {
-            await refreshMarketplaceSubscription(subscriptionId)
-            const [syncedSubRsp, syncedEntRsp] = await Promise.all([
-              getMarketplaceSubscription(subscriptionId),
-              getOrgEntitlements(orgId),
-            ])
-            setSubscription(
-              extractData<MarketplaceSubscriptionSummary>(syncedSubRsp),
-            )
+            // Trigger the sync and poll the status until it settles, so the
+            // banner flips to 'Subscribed' on landing instead of forcing the
+            // user to click "Refresh status" manually.
+            const settledSub = await syncUntilSettled(subscriptionId)
+            setSubscription(settledSub ?? subData)
+
+            // Re-read entitlements after the status settles so plan limits and
+            // feature flags reflect the confirmed subscription.
+            const syncedEntRsp = await getOrgEntitlements(orgId)
             setEntitlements(
               extractData<MarketplaceEntitlements>(syncedEntRsp) ??
                 entitlementData,

@@ -1,5 +1,5 @@
 'use client'
-/* eslint-disable sort-imports */
+/* eslint-disable sort-imports, max-lines */
 
 import {
   Card,
@@ -220,6 +220,11 @@ const CreateDid = (): React.JSX.Element => {
 
   const didOptions = selectedOption ? (didOptionsMap[selectedOption] ?? []) : []
 
+  // When only one option is active (others are commented out), render it as
+  // non-interactive so the user isn't shown a clickable card with nothing to switch to.
+  const activeProtocols = protocolOptions.filter((o) => !o.disabled)
+  const activeSubOptions = subOptions.filter((o) => !o.disabled)
+
   return (
     <PageContainer>
       <div className="bg-background min-h-screen p-6 md:p-10">
@@ -252,7 +257,9 @@ const CreateDid = (): React.JSX.Element => {
             </CardHeader>
 
             <CardContent className="pt-6">
-              <div className="mb-8 grid gap-4 md:grid-cols-2">
+              <div
+                className={`mb-8 grid gap-4 ${activeProtocols.length === 1 ? 'grid-cols-1' : 'md:grid-cols-2'}`}
+              >
                 {protocolOptions.map((option) => {
                   if (option.disabled) {
                     return (
@@ -275,6 +282,38 @@ const CreateDid = (): React.JSX.Element => {
                       </div>
                     )
                   }
+
+                  // Single active protocol — render as non-interactive pre-selected card
+                  if (activeProtocols.length === 1) {
+                    return (
+                      <div
+                        key={option.id}
+                        className="border-primary bg-secondary relative cursor-default rounded-xl border-2 p-6 text-left shadow-sm"
+                      >
+                        {option.id === 'didcomm' && (
+                          <TooltipInfo text={InfoText.DIDCommInfoText} />
+                        )}
+                        {option.id === 'oid4vp' && (
+                          <TooltipInfo text={InfoText.OpenID4VPInfoText} />
+                        )}
+
+                        <div className="mb-6">{option.icon}</div>
+
+                        <div className="mb-1 flex items-center gap-2">
+                          <h3 className="text-foreground font-semibold">
+                            {option.title}
+                          </h3>
+                          <span className="bg-primary text-primary-foreground rounded-full px-2 py-0.5 text-xs font-medium">
+                            Selected
+                          </span>
+                        </div>
+                        <p className="text-muted-foreground text-sm">
+                          {option.desc}
+                        </p>
+                      </div>
+                    )
+                  }
+
                   return (
                     <button
                       key={option.id}
@@ -320,7 +359,9 @@ const CreateDid = (): React.JSX.Element => {
                     Select Credential Format for {selectedProtocolTitle}
                   </p>
 
-                  <div className="grid gap-4 md:grid-cols-2">
+                  <div
+                    className={`grid gap-4 ${activeSubOptions.length === 1 ? 'grid-cols-1' : 'md:grid-cols-2'}`}
+                  >
                     {subOptions.map((option) => {
                       if (option.disabled) {
                         return (
@@ -341,6 +382,30 @@ const CreateDid = (): React.JSX.Element => {
                           </div>
                         )
                       }
+
+                      // Single active format — render as non-interactive pre-selected card
+                      if (activeSubOptions.length === 1) {
+                        return (
+                          <div
+                            key={option.id}
+                            className="border-primary bg-secondary relative cursor-default rounded-xl border-2 p-6 text-left shadow-sm"
+                          >
+                            <TooltipInfo text={option.tooltip} />
+                            <div className="mb-1 flex items-center gap-2">
+                              <h3 className="text-foreground font-semibold">
+                                {option.title}
+                              </h3>
+                              <span className="bg-primary text-primary-foreground rounded-full px-2 py-0.5 text-xs font-medium">
+                                Selected
+                              </span>
+                            </div>
+                            <p className="text-muted-foreground text-sm">
+                              {option.desc}
+                            </p>
+                          </div>
+                        )
+                      }
+
                       return (
                         <button
                           key={option.id}
