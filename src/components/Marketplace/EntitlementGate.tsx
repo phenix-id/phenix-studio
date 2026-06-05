@@ -36,7 +36,10 @@ export function EntitlementGate({
     usageLimitCode,
   } = useEntitlements(orgId)
 
-  if (loading) {
+  // Only block render on the very first load (entitlements not yet fetched).
+  // Background refreshes triggered by tab-focus must NOT unmount children —
+  // doing so would destroy in-progress UI state (e.g. a generated QR code).
+  if (loading && !entitlements) {
     return (
       <div className="text-muted-foreground rounded-md border p-4 text-sm">
         Checking Marketplace entitlement...
