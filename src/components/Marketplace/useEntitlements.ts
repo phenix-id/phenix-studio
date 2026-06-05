@@ -78,6 +78,7 @@ export const useEntitlements = (orgId?: string): UseEntitlementsResult => {
       const syncedData = extractData<MarketplaceEntitlements>(syncedResponse)
       setEntitlements(syncedData ?? data)
       setLoading(false)
+      inFlightRef.current = false
       return
     }
 
