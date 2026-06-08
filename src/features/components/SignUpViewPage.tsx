@@ -14,10 +14,17 @@ export default function SignInPage(): React.JSX.Element {
   const marketplaceRequired =
     process.env.NEXT_PUBLIC_MARKETPLACE_REQUIRED === 'true'
 
+  // UUID format validation prevents spoofed ?invitationId=anything bypassing the gate.
+  const UUID_REGEX =
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+  const hasValidInvitation = Boolean(
+    invitationId && UUID_REGEX.test(invitationId),
+  )
+
   // Full-page subscribe gate — rendered standalone so the absolute logo overlay
   // and h-screen scroll wrapper from the normal sign-up layout don't interfere.
   // Invited users bypass the gate — their org already has a subscription.
-  if (marketplaceRequired && !cameFromMarketplace && !invitationId) {
+  if (marketplaceRequired && !cameFromMarketplace && !hasValidInvitation) {
     return (
       <SubscribeRequired
         fullPage
