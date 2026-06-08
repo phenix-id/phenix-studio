@@ -1,6 +1,7 @@
 /* eslint-disable max-lines, sort-imports */
 import * as React from 'react'
 import * as z from 'zod'
+import * as Yup from 'yup'
 
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Check, Copy, Download, Loader2 } from 'lucide-react'
@@ -31,7 +32,8 @@ import {
 } from '@/app/api/Agent'
 import { getOrganizationById, getOrganizations } from '@/app/api/organization'
 import { useEffect, useState } from 'react'
-import { useForm, Controller } from 'react-hook-form'
+import { ErrorMessage, Field, Form, Formik, FormikHelpers } from 'formik'
+import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 
 import { AlertComponent } from '@/components/AlertComponent'
@@ -91,31 +93,26 @@ interface Organization {
   userOrgRoles: UserOrgRole[]
 }
 
-// Read-only org-derived values used when building the API payload
-interface IOrgDidInfo {
+// Original combined form values for the Polygon Formik dialog
+interface IFormValues {
   method: string
   ledger: string
   network: string
+  domain: string
+  privatekey: string
   endorserDid: string
+  did: string
 }
 
 // ---------------------------------------------------------------------------
-// Zod schemas
+// Zod schema — did:web only (RHF)
 // ---------------------------------------------------------------------------
 
 const webDidSchema = z.object({
   domain: z.string().min(1, 'Domain is required'),
 })
 
-const polygonDidSchema = z.object({
-  privatekey: z
-    .string()
-    .min(1, 'Private key is required')
-    .length(64, 'Private key must be exactly 64 characters'),
-})
-
 type WebDidFormValues = z.infer<typeof webDidSchema>
-type PolygonFormValues = z.infer<typeof polygonDidSchema>
 
 // ---------------------------------------------------------------------------
 // Shared sub-components
@@ -241,12 +238,18 @@ const DIDListComponent = ({ orgId }: { orgId: string }): React.JSX.Element => {
   const [completeDidMethodValue, setCompleteDidMethodValue] = useState<
     string | null
   >(null)
-  const [orgDidInfo, setOrgDidInfo] = useState<IOrgDidInfo>({
+
+  // Original combined initialValues for Polygon Formik dialog
+  const [initialValues, setInitialValues] = useState<IFormValues>({
     method: '',
     ledger: '',
     network: '',
+    domain: '',
+    privatekey: '',
     endorserDid: '',
+    did: '',
   })
+
   const [currentPage] = useState(currentPageNumber)
   const [pageSize] = useState(itemPerPage)
   const [searchTerm] = useState('')
@@ -277,7 +280,7 @@ const DIDListComponent = ({ orgId }: { orgId: string }): React.JSX.Element => {
   const router = useRouter()
 
   // ---------------------------------------------------------------------------
-  // react-hook-form instances
+  // react-hook-form — did:web only
   // ---------------------------------------------------------------------------
 
   const webDidForm = useForm<WebDidFormValues>({
@@ -285,10 +288,31 @@ const DIDListComponent = ({ orgId }: { orgId: string }): React.JSX.Element => {
     defaultValues: { domain: '' },
   })
 
-  const polygonForm = useForm<PolygonFormValues>({
-    resolver: zodResolver(polygonDidSchema),
-    defaultValues: { privatekey: '' },
-  })
+  // ---------------------------------------------------------------------------
+  // Original Polygon Yup validation
+  // ---------------------------------------------------------------------------
+
+  const getValidationSchema = (): Yup.AnyObject => {
+    let schema = Yup.object().shape({
+      method: Yup.string().required('Method is required'),
+      ledger: Yup.string().required('Ledger is required'),
+      network: Yup.string(),
+      domain: Yup.string(),
+      privatekey: Yup.string(),
+      endorserDid: Yup.string(),
+      did: Yup.string(),
+    })
+
+    if (method === DidMethod.POLYGON) {
+      schema = schema.shape({
+        privatekey: Yup.string()
+          .required('Private key is required')
+          .length(64, 'Private key must be exactly 64 characters long'),
+      })
+    }
+
+    return schema
+  }
 
   // ---------------------------------------------------------------------------
   // Data fetching
@@ -402,17 +426,15 @@ const DIDListComponent = ({ orgId }: { orgId: string }): React.JSX.Element => {
       }
       setCompleteDidMethodValue(completeDidMethod)
 
-      setOrgDidInfo({
+      setInitialValues({
         method: didMethod,
         ledger: ledgerName,
         network: networkName,
+        domain: '',
+        privatekey: generatedKeys?.privateKey.slice(2) || '',
         endorserDid: '',
+        did: '',
       })
-
-      // Pre-fill polygon form with any previously generated key
-      if (generatedKeys?.privateKey) {
-        polygonForm.setValue('privatekey', generatedKeys.privateKey.slice(2))
-      }
     } else {
       console.error('Error fetching organization details')
     }
@@ -486,7 +508,77 @@ const DIDListComponent = ({ orgId }: { orgId: string }): React.JSX.Element => {
     }
   }, [havePrivateKey])
 
-  const generatePolygonKeyValuePair = async (): Promise<void> => {
+  // ---------------------------------------------------------------------------
+  // DID creation — original combined handler (Polygon + direct methods)
+  // ---------------------------------------------------------------------------
+
+  const createNewDid = async (values: IFormValues): Promise<void> => {
+    setLoading(true)
+    setErrMsg(null)
+
+    // Only set isCreatingDid for non-Polygon and non-Web methods
+    if (method !== DidMethod.POLYGON && method !== DidMethod.WEB) {
+      setIsCreatingDid(true)
+    }
+
+    let network = ''
+    if (values.method === DidMethod.INDY) {
+      network = values?.network || ''
+    } else if (values.method === DidMethod.POLYGON) {
+      network = `${values.ledger}:${values.network}`
+    }
+
+    const didData = {
+      seed: values.method === DidMethod.POLYGON ? '' : seed,
+      keyType: 'ed25519',
+      method: values.method?.split(':')[1] || '',
+      network,
+      domain: values.method === DidMethod.WEB ? values.domain : '',
+      role: values.method === DidMethod.INDY ? 'endorser' : '',
+      privatekey: values.method === DidMethod.POLYGON ? values.privatekey : '',
+      did: values?.did ?? '',
+      endorserDid: values?.endorserDid || '',
+      isPrimaryDid: false,
+    }
+
+    try {
+      const response = await createDid(orgId, didData)
+      const { data } = response as AxiosResponse
+
+      if (data?.statusCode === apiStatusCodes.API_STATUS_CREATED) {
+        setShowPopup(false)
+        setSuccessMsg(data?.message)
+        setLoading(false)
+        setIsCreatingDid(false)
+        await getData()
+        setTimeout(() => {
+          router.refresh()
+        }, 2000)
+      } else {
+        setErrMsg(response as string)
+        setLoading(false)
+        setIsCreatingDid(false)
+        if (
+          values.method === DidMethod.POLYGON ||
+          values.method === DidMethod.WEB
+        ) {
+          setShowPopup(true)
+        }
+        setTimeout(() => {
+          router.refresh()
+        }, 2000)
+      }
+    } catch (error) {
+      console.error('An error occurred while creating did:', error)
+      setLoading(false)
+      setIsCreatingDid(false)
+    }
+  }
+
+  // Original signature — setFieldValue comes from the Formik render prop
+  const generatePolygonKeyValuePair = async (
+    setFieldValue: FormikHelpers<IFormValues>['setFieldValue'],
+  ): Promise<void> => {
     setIsLoading(true)
     try {
       const resCreatePolygonKeys = await createPolygonKeyValuePair(orgId)
@@ -494,20 +586,20 @@ const DIDListComponent = ({ orgId }: { orgId: string }): React.JSX.Element => {
 
       if (data?.statusCode === apiStatusCodes.API_STATUS_CREATED) {
         setGeneratedKeys(data?.data)
+        setIsLoading(false)
         const privateKey = data?.data?.privateKey.slice(2)
-        setPrivateKeyValue(privateKey)
-        polygonForm.setValue('privatekey', privateKey)
-        await checkBalance(privateKey, Network.TESTNET)
+        setPrivateKeyValue(privateKeyValue || privateKey)
+        setFieldValue('privatekey', privateKey)
+        await checkBalance(privateKeyValue || privateKey, Network.TESTNET)
       }
     } catch (err) {
       console.error('Generate private key ERROR:', err)
-    } finally {
       setIsLoading(false)
     }
   }
 
   // ---------------------------------------------------------------------------
-  // Dialog helpers
+  // did:web two-step helpers
   // ---------------------------------------------------------------------------
 
   const resetWebDialog = (): void => {
@@ -546,55 +638,6 @@ const DIDListComponent = ({ orgId }: { orgId: string }): React.JSX.Element => {
     URL.revokeObjectURL(url)
   }
 
-  // ---------------------------------------------------------------------------
-  // DID creation handlers
-  // ---------------------------------------------------------------------------
-
-  // Non-Polygon, non-Web methods — called directly without a dialog
-  const createNewDidDirect = async (): Promise<void> => {
-    setLoading(true)
-    setErrMsg(null)
-    setIsCreatingDid(true)
-
-    let network = ''
-    if (orgDidInfo.method === DidMethod.INDY) {
-      network = orgDidInfo.network || ''
-    }
-
-    const didData = {
-      seed,
-      keyType: 'ed25519',
-      method: orgDidInfo.method?.split(':')[1] || '',
-      network,
-      domain: '',
-      role: orgDidInfo.method === DidMethod.INDY ? 'endorser' : '',
-      privatekey: '',
-      did: '',
-      endorserDid: orgDidInfo.endorserDid || '',
-      isPrimaryDid: false,
-    }
-
-    try {
-      const response = await createDid(orgId, didData)
-      const { data } = response as AxiosResponse
-
-      if (data?.statusCode === apiStatusCodes.API_STATUS_CREATED) {
-        setSuccessMsg(data?.message)
-        setIsCreatingDid(false)
-        await getData()
-        setTimeout(() => router.refresh(), 2000)
-      } else {
-        setErrorMsg(response as string)
-        setIsCreatingDid(false)
-      }
-    } catch (error) {
-      console.error('Error creating DID:', error)
-      setIsCreatingDid(false)
-    } finally {
-      setLoading(false)
-    }
-  }
-
   // did:web Step 1 — generate the DID document
   const handleGenerateDidWeb = async (
     formData: WebDidFormValues,
@@ -628,7 +671,7 @@ const DIDListComponent = ({ orgId }: { orgId: string }): React.JSX.Element => {
     }
   }
 
-  // did:web Step 2 — create (after user has hosted the document)
+  // did:web Step 2 — create after user confirms hosting
   const handleCreateWebDid = async (): Promise<void> => {
     setLoading(true)
     setErrMsg(null)
@@ -658,7 +701,6 @@ const DIDListComponent = ({ orgId }: { orgId: string }): React.JSX.Element => {
         await getData()
         setTimeout(() => router.refresh(), 2000)
       } else {
-        // Surface a clearer message for the document mismatch case
         const isMismatch =
           typeof data?.message === 'string' &&
           data.message.toLowerCase().includes('does not match')
@@ -671,52 +713,6 @@ const DIDListComponent = ({ orgId }: { orgId: string }): React.JSX.Element => {
     } catch (error) {
       console.error('Error creating did:web:', error)
       setErrMsg('An error occurred while creating the DID')
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  // Polygon — called from RHF form submit
-  const handleCreatePolygonDid = async (
-    formData: PolygonFormValues,
-  ): Promise<void> => {
-    setLoading(true)
-    setErrMsg(null)
-    setIsCreatingDid(true)
-
-    const network = `${orgDidInfo.ledger}:${orgDidInfo.network}`
-    const didData = {
-      seed: '',
-      keyType: 'ed25519',
-      method: 'polygon',
-      network,
-      domain: '',
-      role: '',
-      privatekey: formData.privatekey,
-      did: '',
-      endorserDid: '',
-      isPrimaryDid: false,
-    }
-
-    try {
-      const response = await createDid(orgId, didData)
-      const { data } = response as AxiosResponse
-
-      if (data?.statusCode === apiStatusCodes.API_STATUS_CREATED) {
-        setShowPopup(false)
-        setSuccessMsg(data?.message)
-        setIsCreatingDid(false)
-        await getData()
-        setTimeout(() => router.refresh(), 2000)
-      } else {
-        setErrMsg(response as string)
-        setIsCreatingDid(false)
-        setShowPopup(true)
-        setTimeout(() => router.refresh(), 2000)
-      }
-    } catch (error) {
-      console.error('Error creating Polygon DID:', error)
-      setIsCreatingDid(false)
     } finally {
       setLoading(false)
     }
@@ -785,13 +781,17 @@ const DIDListComponent = ({ orgId }: { orgId: string }): React.JSX.Element => {
             setIsMethodLoading(false)
             setErrMsg(null)
 
-            if (method === DidMethod.POLYGON || method === DidMethod.WEB) {
-              if (method === DidMethod.WEB) {
-                resetWebDialog()
-              }
+            if (method === DidMethod.WEB) {
+              resetWebDialog()
+              setShowPopup(true)
+            } else if (method === DidMethod.POLYGON) {
               setShowPopup(true)
             } else {
-              createNewDidDirect()
+              setIsCreatingDid(true)
+              createNewDid({
+                ...initialValues,
+                method: method || '',
+              })
             }
           }}
           disabled={
@@ -861,12 +861,12 @@ const DIDListComponent = ({ orgId }: { orgId: string }): React.JSX.Element => {
         )}
       </div>
 
-      {/* Dialog — Polygon and did:web only */}
-      {(method === DidMethod.POLYGON || method === DidMethod.WEB) && (
+      {/* ── did:web two-step dialog (RHF) ── */}
+      {method === DidMethod.WEB && (
         <Dialog
           open={showPopup}
           onOpenChange={(open) => {
-            if (!open && method === DidMethod.WEB) {
+            if (!open) {
               resetWebDialog()
             }
             setShowPopup(open)
@@ -874,25 +874,21 @@ const DIDListComponent = ({ orgId }: { orgId: string }): React.JSX.Element => {
         >
           <DialogContent className="max-w-2xl!">
             <DialogHeader>
-              <DialogTitle>
-                {method === DidMethod.WEB ? 'Create did:web DID' : 'Create DID'}
-              </DialogTitle>
+              <DialogTitle>Create did:web DID</DialogTitle>
             </DialogHeader>
 
-            {/* Shared error / success banner */}
             {(successMsg || errMsg) && (
               <Alert variant={successMsg ? 'default' : 'destructive'}>
                 <AlertDescription>{successMsg || errMsg}</AlertDescription>
               </Alert>
             )}
 
-            {/* ── did:web Step 1: enter domain ── */}
-            {method === DidMethod.WEB && webDialogStep === 'domain' && (
+            {/* Step 1 — enter domain */}
+            {webDialogStep === 'domain' && (
               <form
                 onSubmit={webDidForm.handleSubmit(handleGenerateDidWeb)}
                 className="space-y-4"
               >
-                {/* Read-only method display */}
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   <div>
                     <Label>DID Method</Label>
@@ -941,305 +937,328 @@ const DIDListComponent = ({ orgId }: { orgId: string }): React.JSX.Element => {
               </form>
             )}
 
-            {/* ── did:web Step 2: host document & confirm ── */}
-            {method === DidMethod.WEB &&
-              webDialogStep === 'hosting' &&
-              generatedDidDoc && (
-                <div className="space-y-4">
-                  {/* Hosting URL */}
-                  <div>
-                    <p className="text-foreground mb-1 text-sm font-medium">
-                      Required hosting URL
-                    </p>
-                    <div className="bg-muted rounded-md px-3 py-2 font-mono text-sm break-all">
-                      {`https://${webDidForm.getValues('domain')}/.well-known/did.json`}
-                    </div>
-                  </div>
-
-                  {/* JSON document */}
-                  <div>
-                    <p className="text-foreground mb-1 text-sm font-medium">
-                      DID Document
-                    </p>
-                    <div className="relative">
-                      <pre className="bg-muted max-h-60 overflow-auto rounded-md p-4 font-mono text-xs">
-                        {JSON.stringify(generatedDidDoc, null, 2)}
-                      </pre>
-                      <div className="absolute top-2 right-2 flex gap-1">
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          className="bg-muted/80 h-7 w-7"
-                          onClick={copyDidDocument}
-                        >
-                          {didDocCopied ? (
-                            <Check className="h-3.5 w-3.5" />
-                          ) : (
-                            <Copy className="h-3.5 w-3.5" />
-                          )}
-                        </Button>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          className="bg-muted/80 h-7 w-7"
-                          onClick={downloadDidDocument}
-                        >
-                          <Download className="h-3.5 w-3.5" />
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Hosting confirmation checkbox */}
-                  <div className="flex items-start space-x-2 pt-1">
-                    <Checkbox
-                      id="hosting-confirmed-dialog"
-                      checked={isHostingConfirmed}
-                      onCheckedChange={(checked) =>
-                        setIsHostingConfirmed(checked === true)
-                      }
-                    />
-                    <Label
-                      htmlFor="hosting-confirmed-dialog"
-                      className="cursor-pointer text-sm leading-relaxed"
-                    >
-                      I have hosted the DID document at{' '}
-                      <span className="font-mono text-xs">{`https://${webDidForm.getValues('domain')}/.well-known/did.json`}</span>
-                    </Label>
-                  </div>
-
-                  {/* Actions */}
-                  <div className="flex justify-between pt-2">
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      onClick={() => {
-                        setWebDialogStep('domain')
-                        setGeneratedDidDoc(null)
-                        setIsHostingConfirmed(false)
-                        setErrMsg(null)
-                      }}
-                    >
-                      ← Back
-                    </Button>
-                    <Button
-                      type="button"
-                      onClick={handleCreateWebDid}
-                      disabled={!isHostingConfirmed || loading}
-                    >
-                      {loading ? (
-                        <>
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          Creating DID...
-                        </>
-                      ) : (
-                        'Create DID'
-                      )}
-                    </Button>
+            {/* Step 2 — host document & confirm */}
+            {webDialogStep === 'hosting' && generatedDidDoc && (
+              <div className="space-y-4">
+                <div>
+                  <p className="text-foreground mb-1 text-sm font-medium">
+                    Required hosting URL
+                  </p>
+                  <div className="bg-muted rounded-md px-3 py-2 font-mono text-sm break-all">
+                    {`https://${webDidForm.getValues('domain')}/.well-known/did.json`}
                   </div>
                 </div>
-              )}
 
-            {/* ── Polygon ── */}
-            {method === DidMethod.POLYGON && (
-              <form
-                onSubmit={polygonForm.handleSubmit(handleCreatePolygonDid)}
-                className="space-y-4"
-              >
-                {/* Read-only org info */}
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                  <div>
-                    <Label htmlFor="polygon-ledger">
-                      Ledger <span className="text-destructive text-xs">*</span>
-                    </Label>
-                    <Input
-                      id="polygon-ledger"
-                      readOnly
-                      tabIndex={-1}
-                      className="bg-muted mt-1 cursor-default select-none"
-                      value={orgDidInfo.ledger}
-                    />
-                  </div>
-                  <div>
-                    <Label>
-                      DID Method{' '}
-                      <span className="text-destructive text-xs">*</span>
-                    </Label>
-                    <Input
-                      value={completeDidMethodValue || ''}
-                      readOnly
-                      tabIndex={-1}
-                      className="bg-muted mt-1 cursor-default select-none"
-                    />
-                  </div>
-
-                  <div className="col-span-1 sm:col-span-2">
-                    <div className="mb-4 flex items-center space-x-2">
-                      <Checkbox
-                        id="havePrivateKey"
-                        checked={havePrivateKey}
-                        onCheckedChange={(checked) =>
-                          setHavePrivateKey(checked === true)
-                        }
-                      />
-                      <Label htmlFor="havePrivateKey">
-                        Already have a private key?
-                      </Label>
-                    </div>
-
-                    {!havePrivateKey ? (
-                      <>
-                        <div className="my-3 flex items-center justify-between">
-                          <Label>
-                            Generate private key{' '}
-                            <span className="text-destructive text-xs">*</span>
-                          </Label>
-                          <Button
-                            type="button"
-                            onClick={generatePolygonKeyValuePair}
-                            disabled={isLoading}
-                          >
-                            {isLoading ? 'Generating...' : 'Generate'}
-                          </Button>
-                        </div>
-
-                        {generatedKeys && (
-                          <>
-                            <div className="relative mt-3">
-                              <div className="relative mt-3 w-full overflow-x-auto">
-                                <div className="flex w-full items-center">
-                                  <div className="ml-2 shrink-0">
-                                    <CopyDid
-                                      value={generatedKeys.privateKey.slice(2)}
-                                      showCheck={true}
-                                    />
-                                  </div>
-                                </div>
-                              </div>
-                              {polygonForm.formState.errors.privatekey && (
-                                <p className="text-destructive mt-1 text-sm">
-                                  {
-                                    polygonForm.formState.errors.privatekey
-                                      .message
-                                  }
-                                </p>
-                              )}
-                              {walletErrorMessage && (
-                                <p className="text-destructive text-sm">
-                                  {walletErrorMessage}
-                                </p>
-                              )}
-                            </div>
-                            <TokenWarningMessage />
-                            <div className="my-3">
-                              <div className="text-sm">
-                                <span className="font-semibold">Address:</span>
-                                <CopyDid
-                                  value={generatedKeys.address}
-                                  className="mt-1"
-                                  showCheck={true}
-                                />
-                              </div>
-                            </div>
-                          </>
+                <div>
+                  <p className="text-foreground mb-1 text-sm font-medium">
+                    DID Document
+                  </p>
+                  <div className="relative">
+                    <pre className="bg-muted max-h-60 overflow-auto rounded-md p-4 font-mono text-xs">
+                      {JSON.stringify(generatedDidDoc, null, 2)}
+                    </pre>
+                    <div className="absolute top-2 right-2 flex gap-1">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="bg-muted/80 h-7 w-7"
+                        onClick={copyDidDocument}
+                      >
+                        {didDocCopied ? (
+                          <Check className="h-3.5 w-3.5" />
+                        ) : (
+                          <Copy className="h-3.5 w-3.5" />
                         )}
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="bg-muted/80 h-7 w-7"
+                        onClick={downloadDidDocument}
+                      >
+                        <Download className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex items-start space-x-2 pt-1">
+                  <Checkbox
+                    id="hosting-confirmed-dialog"
+                    checked={isHostingConfirmed}
+                    onCheckedChange={(checked) =>
+                      setIsHostingConfirmed(checked === true)
+                    }
+                  />
+                  <Label
+                    htmlFor="hosting-confirmed-dialog"
+                    className="cursor-pointer text-sm leading-relaxed"
+                  >
+                    I have hosted the DID document at{' '}
+                    <span className="font-mono text-xs">{`https://${webDidForm.getValues('domain')}/.well-known/did.json`}</span>
+                  </Label>
+                </div>
+
+                <div className="flex justify-between pt-2">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    onClick={() => {
+                      setWebDialogStep('domain')
+                      setGeneratedDidDoc(null)
+                      setIsHostingConfirmed(false)
+                      setErrMsg(null)
+                    }}
+                  >
+                    ← Back
+                  </Button>
+                  <Button
+                    type="button"
+                    onClick={handleCreateWebDid}
+                    disabled={!isHostingConfirmed || loading}
+                  >
+                    {loading ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Creating DID...
                       </>
                     ) : (
-                      <div>
-                        <Controller
-                          name="privatekey"
-                          control={polygonForm.control}
-                          render={({ field }) => (
-                            <Input
-                              {...field}
-                              placeholder="Enter private key"
-                              onChange={(e) => {
-                                field.onChange(e)
-                                setPrivateKeyValue(e.target.value)
-                                setWalletErrorMessage(null)
-                                if (e.target.value.length === 64) {
-                                  checkBalance(e.target.value, Network.TESTNET)
-                                }
-                              }}
-                            />
-                          )}
-                        />
-                        {polygonForm.formState.errors.privatekey && (
-                          <p className="text-destructive mt-1 text-sm">
-                            {polygonForm.formState.errors.privatekey.message}
-                          </p>
-                        )}
-                        {walletErrorMessage && (
-                          <p className="text-destructive text-sm">
-                            {walletErrorMessage}
-                          </p>
-                        )}
-                        <TokenWarningMessage />
-                      </div>
+                      'Create DID'
                     )}
-                  </div>
-
-                  <div className="col-span-1 sm:col-span-2">
-                    <h3 className="mb-2 text-sm font-semibold">
-                      Follow these instructions to generate polygon tokens:
-                    </h3>
-                    <ol className="space-y-2 text-sm">
-                      <li>
-                        <span className="font-semibold">Step 1:</span>
-                        <div className="ml-4">
-                          Copy the address and get the free tokens for the
-                          testnet.
-                          <div>
-                            For eg. use{' '}
-                            <a
-                              href={polygonFaucet}
-                              className="font-semibold underline"
-                              target="_blank"
-                              rel="noopener noreferrer"
-                            >
-                              {polygonFaucet}
-                            </a>{' '}
-                            to get free token
-                          </div>
-                        </div>
-                      </li>
-                      <li>
-                        <span className="font-semibold">Step 2:</span>
-                        <div className="ml-4">
-                          Check that you have received the tokens.
-                          <div>
-                            For eg. copy the address and check the balance on{' '}
-                            <a
-                              href="https://mumbai.polygonscan.com/"
-                              className="underline"
-                              target="_blank"
-                              rel="noopener noreferrer"
-                            >
-                              https://mumbai.polygonscan.com/
-                            </a>
-                          </div>
-                        </div>
-                      </li>
-                    </ol>
-                  </div>
-                </div>
-
-                <div className="flex justify-end">
-                  <Button
-                    type="submit"
-                    disabled={
-                      loading ||
-                      !polygonForm.watch('privatekey') ||
-                      Boolean(walletErrorMessage)
-                    }
-                  >
-                    {loading ? 'Submitting...' : 'Submit'}
                   </Button>
                 </div>
-              </form>
+              </div>
             )}
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {/* ── Polygon dialog — original Formik ── */}
+      {method === DidMethod.POLYGON && (
+        <Dialog open={showPopup} onOpenChange={setShowPopup}>
+          <DialogContent className="max-w-2xl!">
+            <DialogHeader>
+              <DialogTitle>Create DID</DialogTitle>
+            </DialogHeader>
+
+            {(successMsg || errMsg) && (
+              <Alert variant={successMsg ? 'default' : 'destructive'}>
+                <AlertDescription>{successMsg || errMsg}</AlertDescription>
+              </Alert>
+            )}
+
+            <Formik
+              initialValues={initialValues}
+              validationSchema={getValidationSchema()}
+              enableReinitialize={true}
+              onSubmit={(values) => createNewDid(values)}
+            >
+              {({ values, setFieldValue }) => (
+                <Form className="space-y-4">
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                    <div>
+                      <Label htmlFor="ledger">
+                        Ledger{' '}
+                        <span className="text-destructive text-xs">*</span>
+                      </Label>
+                      <Field
+                        as={Input}
+                        id="ledger"
+                        name="ledger"
+                        readOnly
+                        tabIndex={-1}
+                        className="bg-muted cursor-default select-none"
+                        value={values.ledger}
+                      />
+                      <ErrorMessage
+                        name="ledger"
+                        component="div"
+                        className="text-destructive mt-1 text-sm"
+                      />
+                    </div>
+
+                    <div>
+                      <Label>
+                        DID Method{' '}
+                        <span className="text-destructive text-xs">*</span>
+                      </Label>
+                      <Input
+                        value={completeDidMethodValue || ''}
+                        readOnly
+                        tabIndex={-1}
+                        className="bg-muted cursor-default select-none"
+                      />
+                    </div>
+
+                    <div className="col-span-1 sm:col-span-2">
+                      <div className="mb-4 flex items-center space-x-2">
+                        <Checkbox
+                          id="havePrivateKey"
+                          checked={havePrivateKey}
+                          onCheckedChange={(checked) =>
+                            setHavePrivateKey(checked === true)
+                          }
+                        />
+                        <Label htmlFor="havePrivateKey">
+                          Already have a private key?
+                        </Label>
+                      </div>
+
+                      {!havePrivateKey ? (
+                        <>
+                          <div className="my-3 flex items-center justify-between">
+                            <Label>
+                              Generate private key{' '}
+                              <span className="text-destructive text-xs">
+                                *
+                              </span>
+                            </Label>
+                            <Button
+                              type="button"
+                              onClick={() =>
+                                generatePolygonKeyValuePair(setFieldValue)
+                              }
+                              disabled={isLoading}
+                            >
+                              {isLoading ? 'Generating...' : 'Generate'}
+                            </Button>
+                          </div>
+
+                          {generatedKeys && (
+                            <>
+                              <div className="relative mt-3">
+                                <div className="relative mt-3 w-full overflow-x-auto">
+                                  <div className="flex w-full items-center">
+                                    <div className="ml-2 shrink-0">
+                                      <CopyDid
+                                        value={generatedKeys.privateKey.slice(
+                                          2,
+                                        )}
+                                        showCheck={true}
+                                      />
+                                    </div>
+                                  </div>
+                                </div>
+                                <ErrorMessage
+                                  name="privatekey"
+                                  component="div"
+                                  className="text-destructive mt-1 text-sm"
+                                />
+                                {walletErrorMessage && (
+                                  <p className="text-destructive text-sm">
+                                    {walletErrorMessage}
+                                  </p>
+                                )}
+                              </div>
+                              <TokenWarningMessage />
+                              <div className="my-3">
+                                <div className="text-sm">
+                                  <span className="font-semibold">
+                                    Address:
+                                  </span>
+                                  <CopyDid
+                                    value={generatedKeys.address}
+                                    className="mt-1"
+                                    showCheck={true}
+                                  />
+                                </div>
+                              </div>
+                            </>
+                          )}
+                        </>
+                      ) : (
+                        <div>
+                          <Field
+                            as={Input}
+                            name="privatekey"
+                            placeholder="Enter private key"
+                            onChange={(
+                              e: React.ChangeEvent<HTMLInputElement>,
+                            ) => {
+                              setFieldValue('privatekey', e.target.value)
+                              setPrivateKeyValue(e.target.value)
+                              setWalletErrorMessage(null)
+                              if (e.target.value.length === 64) {
+                                checkBalance(e.target.value, Network.TESTNET)
+                              }
+                            }}
+                          />
+                          <ErrorMessage
+                            name="privatekey"
+                            component="div"
+                            className="text-destructive mt-1 text-sm"
+                          />
+                          {walletErrorMessage && (
+                            <p className="text-destructive text-sm">
+                              {walletErrorMessage}
+                            </p>
+                          )}
+                          <TokenWarningMessage />
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="col-span-1 sm:col-span-2">
+                      <h3 className="mb-2 text-sm font-semibold">
+                        Follow these instructions to generate polygon tokens:
+                      </h3>
+                      <ol className="space-y-2 text-sm">
+                        <li>
+                          <span className="font-semibold">Step 1:</span>
+                          <div className="ml-4">
+                            Copy the address and get the free tokens for the
+                            testnet.
+                            <div>
+                              For eg. use{' '}
+                              <a
+                                href={polygonFaucet}
+                                className="font-semibold underline"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                              >
+                                {polygonFaucet}
+                              </a>{' '}
+                              to get free token
+                            </div>
+                          </div>
+                        </li>
+                        <li>
+                          <span className="font-semibold">Step 2:</span>
+                          <div className="ml-4">
+                            Check that you have received the tokens.
+                            <div>
+                              For eg. copy the address and check the balance on{' '}
+                              <a
+                                href="https://mumbai.polygonscan.com/"
+                                className="underline"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                              >
+                                https://mumbai.polygonscan.com/
+                              </a>
+                            </div>
+                          </div>
+                        </li>
+                      </ol>
+                    </div>
+                  </div>
+
+                  <div className="flex justify-end">
+                    <Button
+                      type="submit"
+                      disabled={
+                        loading ||
+                        (method === DidMethod.POLYGON && !values.privatekey)
+                      }
+                    >
+                      {loading ? 'Submitting...' : 'Submit'}
+                    </Button>
+                  </div>
+                </Form>
+              )}
+            </Formik>
           </DialogContent>
         </Dialog>
       )}
