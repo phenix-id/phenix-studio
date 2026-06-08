@@ -89,6 +89,13 @@ interface DataTableProps<TData, TValue> {
    * Loading state to show data loading state.
    */
   isLoading?: boolean
+
+  /**
+   * Optional actions rendered on the right side of the toolbar, next to the
+   * column-visibility toggle. Use this to add page-specific buttons (e.g. a
+   * "Scan QR" button) without modifying the toolbar itself.
+   */
+  toolbarActions?: React.ReactNode
 }
 
 /**
@@ -122,6 +129,7 @@ export function DataTable<TData, TValue>({
   onPageSizeChange,
   onSearchTerm,
   isLoading = false,
+  toolbarActions,
 }: DataTableProps<TData, TValue>) {
   const [rowSelection, setRowSelection] = React.useState({})
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({})
@@ -177,6 +185,7 @@ export function DataTable<TData, TValue>({
         searchPlaceholder={placeHolder}
         table={table}
         onSearchTermChange={onSearchTerm}
+        toolbarActions={toolbarActions}
       />
       <div className="overflow-hidden rounded-lg border">
         <Table className="divide-muted">
