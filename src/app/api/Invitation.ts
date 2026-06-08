@@ -1,4 +1,9 @@
-import { axiosGet, axiosPost, ecosystemAxiosGet } from '@/services/apiRequests'
+import {
+  axiosGet,
+  axiosPost,
+  axiosPublicUserGet,
+  ecosystemAxiosGet,
+} from '@/services/apiRequests'
 
 import { ApiErrorResult } from '@/app/api/organization'
 import { AxiosResponse } from 'axios'
@@ -136,5 +141,23 @@ export const getUserEcosystemInvitations = async (
   } catch (error) {
     const err = error as Error
     return err?.message
+  }
+}
+
+// Verify that an org invitation exists, is pending, and matches the given email.
+// Used by the signup gate to authenticate an invitation bypass without requiring login.
+export const verifyInvitationPending = async (
+  invitationId: string,
+  email: string,
+): Promise<{ valid: boolean }> => {
+  const url = `${apiRoutes.organizations.root}/invitations/verify-pending?invitationId=${encodeURIComponent(invitationId)}&email=${encodeURIComponent(email)}`
+  const config = getHeaderConfigs()
+
+  try {
+    const response = await axiosPublicUserGet({ url, config })
+    const { data } = response as AxiosResponse
+    return { valid: Boolean(data?.data?.valid) }
+  } catch {
+    return { valid: false }
   }
 }

@@ -38,6 +38,7 @@ export default function EmailVerificationForm({
   const searchParams = useSearchParams()
   const clientAliasValue = searchParams?.get('clientAlias')
   const redirectTo = searchParams?.get('redirectTo')
+  const invitationId = searchParams?.get('invitationId')
 
   // Send an existing/fully-registered account to sign-in (preserving the marketplace
   // redirectTo + clientAlias) instead of dead-ending on an error or a redundant signup.
@@ -68,6 +69,9 @@ export default function EmailVerificationForm({
         // Pass the return path so the backend bakes it into the verification email link
         // and the marketplace token survives the round-trip back to onboarding.
         ...(redirectTo ? { redirectTo } : {}),
+        // Pass the invitation ID so the backend bakes it into the verification email link
+        // and the gate bypass survives the email round-trip for new invited users.
+        ...(invitationId ? { invitationId } : {}),
       }
 
       const userRsp = await sendVerificationMail(payload)
