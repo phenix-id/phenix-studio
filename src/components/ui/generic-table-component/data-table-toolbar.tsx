@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import React, { useEffect, useState } from 'react'
 
 import { Button } from '@/components/ui/button'
 import { Cross2Icon } from '@radix-ui/react-icons'
@@ -22,6 +22,7 @@ interface DataTableToolbarProps<TData> {
   tableFilterOptions?: TableFilterOptions[]
   onSearchTermChange: (term: string) => void
   searchPlaceholder?: string
+  toolbarActions?: React.ReactNode
 }
 
 export function DataTableToolbar<TData>({
@@ -29,6 +30,7 @@ export function DataTableToolbar<TData>({
   tableFilterOptions,
   onSearchTermChange,
   searchPlaceholder,
+  toolbarActions,
 }: DataTableToolbarProps<TData>) {
   const isFiltered = table.getState().columnFilters.length > 0
 
@@ -87,7 +89,10 @@ export function DataTableToolbar<TData>({
           </Button>
         )}
       </div>
-      <DataTableViewOptions table={table} />
+      <div className="flex items-center gap-2">
+        {toolbarActions}
+        <DataTableViewOptions table={table} />
+      </div>
     </div>
   )
 }

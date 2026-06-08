@@ -1,5 +1,5 @@
 'use client'
-/* eslint-disable sort-imports, max-lines */
+/* eslint-disable sort-imports, max-lines, @typescript-eslint/no-use-before-define */
 
 import {
   Card,
@@ -28,13 +28,16 @@ import { useSearchParams } from 'next/navigation'
 import { AlertComponent } from '@/components/AlertComponent'
 import type { AxiosResponse } from 'axios'
 import { Button } from '@/components/ui/button'
+import { Checkbox } from '@/components/ui/checkbox'
+import { Label } from '@/components/ui/label'
+import { Check, Copy, Download } from 'lucide-react'
 import { DidMethod } from '@/common/enums'
 import PageContainer from '@/components/layout/page-container'
 import SetDomainValueInput from './SetDomainValueInput'
 import SetPrivateKeyValueInput from './SetPrivateKeyValue'
 import Stepper from '@/components/StepperComponent'
 import TooltipInfo from '@/components/TooltipInfo'
-import { createDid } from '@/app/api/Agent'
+import { createDid, generateDidWeb } from '@/app/api/Agent'
 import { getOrganizationById } from '@/app/api/organization'
 import { hardNavigate } from '@/utils/navigation'
 import { useAppSelector } from '@/lib/hooks'
@@ -61,6 +64,16 @@ const CreateDid = (): React.JSX.Element => {
   type Protocol = 'didcomm' | 'oid4vp'
   const [step, setStep] = useState(3)
 
+  // did:web two-step flow state
+  type WebFlowState = 'idle' | 'generating' | 'generated'
+  const [webFlowState, setWebFlowState] = useState<WebFlowState>('idle')
+  const [generatedDidDoc, setGeneratedDidDoc] = useState<Record<
+    string,
+    unknown
+  > | null>(null)
+  const [isHostingConfirmed, setIsHostingConfirmed] = useState(false)
+  const [didDocCopied, setDidDocCopied] = useState(false)
+
   const totalSteps = 4
   const searchParams = useSearchParams()
   const selectedOrgId = useAppSelector((state) => state.organization.orgId)
@@ -72,6 +85,13 @@ const CreateDid = (): React.JSX.Element => {
     const generatedSeeds = nanoid(32)
     setSeeds(generatedSeeds)
   }, [])
+
+  // Reset the did:web generate flow whenever the domain input changes
+  useEffect(() => {
+    setWebFlowState('idle')
+    setGeneratedDidDoc(null)
+    setIsHostingConfirmed(false)
+  }, [domainValue])
 
   useEffect(() => {
     const ensureWalletExists = async (): Promise<void> => {
@@ -135,6 +155,12 @@ const CreateDid = (): React.JSX.Element => {
     }
 
     if (!validateForm()) {
+      return
+    }
+
+    // did:web Step 1 — generate the document first; user must host it before create
+    if (selectedDid === 'did:web' && webFlowState === 'idle') {
+      await handleGenerateDidWeb()
       return
     }
 
@@ -204,6 +230,65 @@ const CreateDid = (): React.JSX.Element => {
     } finally {
       setIsApiInProgress(false)
     }
+  }
+
+  const handleGenerateDidWeb = async (): Promise<void> => {
+    setIsApiInProgress(true)
+    setAlert(null)
+    setWebFlowState('generating')
+
+    const payload = {
+      method: 'web',
+      keyType: 'ed25519',
+      domain: domainValue,
+      seed: seeds,
+      isPrimaryDid: false,
+    }
+
+    try {
+      const res = await generateDidWeb(orgId!, payload)
+      const { data } = res as AxiosResponse
+
+      if (data?.statusCode === apiStatusCodes.API_STATUS_SUCCESS) {
+        setGeneratedDidDoc(data?.data?.didDocument)
+        setWebFlowState('generated')
+      } else {
+        setAlert(data?.message || 'Failed to generate DID document')
+        setWebFlowState('idle')
+      }
+    } catch {
+      setAlert('Failed to generate DID document. Please try again.')
+      setWebFlowState('idle')
+    } finally {
+      setIsApiInProgress(false)
+    }
+  }
+
+  const copyDidDocument = (): void => {
+    if (!generatedDidDoc) {
+      return
+    }
+    const json = JSON.stringify(generatedDidDoc, null, 2)
+    navigator.clipboard.writeText(json).then(() => {
+      setDidDocCopied(true)
+      setTimeout(() => setDidDocCopied(false), 2000)
+    })
+  }
+
+  const downloadDidDocument = (): void => {
+    if (!generatedDidDoc) {
+      return
+    }
+    const json = JSON.stringify(generatedDidDoc, null, 2)
+    const blob = new Blob([json], { type: 'application/json' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = 'did.json'
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
   }
 
   const handleDomainChange = (value: string): void => {
@@ -456,6 +541,9 @@ const CreateDid = (): React.JSX.Element => {
                       onValueChange={(value) => {
                         setSelectedDid(value)
                         setDomainError(null)
+                        setWebFlowState('idle')
+                        setGeneratedDidDoc(null)
+                        setIsHostingConfirmed(false)
                       }}
                     >
                       <SelectTrigger className="w-full md:w-1/2">
@@ -545,6 +633,87 @@ const CreateDid = (): React.JSX.Element => {
             </Card>
           )}
 
+          {/* did:web Step 2 — host document confirmation */}
+          {selectedDid === 'did:web' &&
+            webFlowState === 'generated' &&
+            generatedDidDoc && (
+              <Card className="border-border border shadow-sm">
+                <CardHeader className="border-border bg-background border-b">
+                  <CardTitle className="text-foreground text-lg font-semibold">
+                    Host Your DID Document
+                  </CardTitle>
+                  <CardDescription className="text-muted-foreground text-sm">
+                    Copy or download this file and host it at the URL below. The
+                    next step will verify it is publicly accessible before
+                    saving the DID.
+                  </CardDescription>
+                </CardHeader>
+
+                <CardContent className="space-y-4 pt-6">
+                  <div>
+                    <p className="text-foreground mb-1 text-sm font-medium">
+                      Required hosting URL
+                    </p>
+                    <div className="bg-muted rounded-md px-3 py-2 font-mono text-sm break-all">
+                      {`https://${domainValue}/.well-known/did.json`}
+                    </div>
+                  </div>
+
+                  <div>
+                    <p className="text-foreground mb-1 text-sm font-medium">
+                      DID Document
+                    </p>
+                    <div className="relative">
+                      <pre className="bg-muted max-h-60 overflow-auto rounded-md p-4 font-mono text-xs">
+                        {JSON.stringify(generatedDidDoc, null, 2)}
+                      </pre>
+                      <div className="absolute top-2 right-2 flex gap-1">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="bg-muted/80 h-7 w-7"
+                          onClick={copyDidDocument}
+                        >
+                          {didDocCopied ? (
+                            <Check className="h-3.5 w-3.5" />
+                          ) : (
+                            <Copy className="h-3.5 w-3.5" />
+                          )}
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="bg-muted/80 h-7 w-7"
+                          onClick={downloadDidDocument}
+                        >
+                          <Download className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start space-x-2 pt-1">
+                    <Checkbox
+                      id="hosting-confirmed"
+                      checked={isHostingConfirmed}
+                      onCheckedChange={(checked) =>
+                        setIsHostingConfirmed(checked === true)
+                      }
+                    />
+                    <Label
+                      htmlFor="hosting-confirmed"
+                      className="cursor-pointer text-sm leading-relaxed"
+                    >
+                      I have hosted the DID document at{' '}
+                      <span className="font-mono text-xs">{`https://${domainValue}/.well-known/did.json`}</span>
+                    </Label>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
           {(alert || success) && (
             <div className="space-y-2">
               {alert && (
@@ -565,13 +734,38 @@ const CreateDid = (): React.JSX.Element => {
           )}
 
           {selectedDid && (
-            <div className="mt-6 flex flex-col items-end">
+            <div className="mt-6 flex flex-col items-end gap-2">
+              {selectedDid === 'did:web' && webFlowState === 'generated' && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  className="text-muted-foreground text-sm"
+                  onClick={() => {
+                    setWebFlowState('idle')
+                    setGeneratedDidDoc(null)
+                    setIsHostingConfirmed(false)
+                  }}
+                >
+                  ← Back to edit
+                </Button>
+              )}
               <Button
                 onClick={handleSubmit}
-                disabled={isApiInProgress}
+                disabled={
+                  isApiInProgress ||
+                  (selectedDid === 'did:web' &&
+                    webFlowState === 'generated' &&
+                    !isHostingConfirmed)
+                }
                 className="bg-primary text-primary-foreground hover:bg-primary/90 rounded-lg px-8 py-2 font-medium shadow-sm disabled:opacity-50"
               >
-                {isApiInProgress ? 'Creating DID...' : 'Create DID'}
+                {isApiInProgress
+                  ? webFlowState === 'generating'
+                    ? 'Generating...'
+                    : 'Creating DID...'
+                  : selectedDid === 'did:web' && webFlowState === 'idle'
+                    ? 'Generate DID Document'
+                    : 'Create DID'}
               </Button>
             </div>
           )}
