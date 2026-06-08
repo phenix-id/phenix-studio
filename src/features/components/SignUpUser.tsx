@@ -16,6 +16,7 @@ export default function SignUpUser(): React.JSX.Element {
   const userEmail = searchParam.get('email')
   const redirectTo = searchParam.get('redirectTo')
   const clientAlias = searchParam.get('clientAlias')
+  const invitationId = searchParam.get('invitationId')
 
   const signInUrl =
     redirectTo && clientAlias
@@ -30,7 +31,7 @@ export default function SignUpUser(): React.JSX.Element {
   const marketplaceRequired =
     process.env.NEXT_PUBLIC_MARKETPLACE_REQUIRED === 'true'
 
-  if (marketplaceRequired && !cameFromMarketplace) {
+  if (marketplaceRequired && !cameFromMarketplace && !invitationId) {
     return (
       <SubscribeRequired
         title="Subscribe to get started"
@@ -80,7 +81,10 @@ export default function SignUpUser(): React.JSX.Element {
             email={userEmail ?? ''}
             setEmail={setEmail}
             goToNext={() => setStep(2)}
-            locked={cameFromMarketplace && Boolean(userEmail)}
+            locked={
+              (cameFromMarketplace || Boolean(invitationId)) &&
+              Boolean(userEmail)
+            }
           />
         )}
 
