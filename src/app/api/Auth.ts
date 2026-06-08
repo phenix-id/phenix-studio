@@ -17,6 +17,9 @@ export interface IUserSignUpData {
   // Relative return path baked into the verification email link so it survives the
   // round-trip (e.g. the marketplace landing with its ?token=).
   redirectTo?: string
+  // Org invitation ID — threaded through the verification email so the gate bypass
+  // and post-signup redirect survive the email round-trip.
+  invitationId?: string
 }
 export interface IAddPasswordDetails {
   email: string
