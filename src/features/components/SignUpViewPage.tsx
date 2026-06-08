@@ -9,13 +9,15 @@ import { useSearchParams } from 'next/navigation'
 export default function SignInPage(): React.JSX.Element {
   const searchParams = useSearchParams()
   const redirectTo = searchParams.get('redirectTo') ?? ''
+  const invitationId = searchParams.get('invitationId')
   const cameFromMarketplace = redirectTo.includes('/marketplace/landing')
   const marketplaceRequired =
     process.env.NEXT_PUBLIC_MARKETPLACE_REQUIRED === 'true'
 
   // Full-page subscribe gate — rendered standalone so the absolute logo overlay
   // and h-screen scroll wrapper from the normal sign-up layout don't interfere.
-  if (marketplaceRequired && !cameFromMarketplace) {
+  // Invited users bypass the gate — their org already has a subscription.
+  if (marketplaceRequired && !cameFromMarketplace && !invitationId) {
     return (
       <SubscribeRequired
         fullPage

@@ -65,6 +65,7 @@ export default function UserInfoForm({
   const searchParams = useSearchParams()
   const redirectTo = searchParams.get('redirectTo')
   const clientAlias = searchParams.get('clientAlias')
+  const invitationId = searchParams.get('invitationId')
 
   const onSubmit = async (values: {
     firstName: string
@@ -96,7 +97,9 @@ export default function UserInfoForm({
           router.push(
             redirectTo && clientAlias
               ? `/sign-in?signup=true&email=${email}&redirectTo=${encodeURIComponent(redirectTo)}&clientAlias=${clientAlias}&fidoFlag=false&method=password`
-              : `/sign-in?email=${email}&fidoFlag=false&method=password`,
+              : invitationId
+                ? `/sign-in?email=${email}&fidoFlag=false&method=password&redirectTo=${encodeURIComponent('/invitations')}`
+                : `/sign-in?email=${email}&fidoFlag=false&method=password`,
           )
         }, 2000)
       } else {
