@@ -67,18 +67,19 @@ export default function VerifyEmailPage(): React.JSX.Element {
     const clientAlias = searchParams.get('clientAlias')
     const invitationId = searchParams.get('invitationId')
 
-    const params = new URLSearchParams({ email })
-    if (redirectTo) {
-      params.set('redirectTo', redirectTo)
-    }
-    if (clientAlias) {
-      params.set('clientAlias', clientAlias)
-    }
+    // email is inserted via template literal (not URLSearchParams) to preserve the
+    // encoding the verification email round-trip produced — URLSearchParams would
+    // re-encode any percent-signs already in the value.
+    let url =
+      redirectTo && clientAlias
+        ? `/sign-up?email=${email}&redirectTo=${encodeURIComponent(redirectTo)}&clientAlias=${clientAlias}`
+        : `/sign-up?email=${email}`
+
     if (invitationId) {
-      params.set('invitationId', invitationId)
+      url += `&invitationId=${invitationId}`
     }
 
-    router.push(`/sign-up?${params.toString()}`)
+    router.push(url)
   }
 
   return (

@@ -16,19 +16,24 @@ export default function SignInPage(): React.JSX.Element {
   const marketplaceRequired =
     process.env.NEXT_PUBLIC_MARKETPLACE_REQUIRED === 'true'
 
-  // null = still checking, true/false = result from backend
+  // null = still checking, true/false = result from backend.
+  // Only start in null (loading) state when we will actually call the backend:
+  // needs an invitationId, marketplace mode on, and not already a marketplace flow.
+  const needsBackendCheck =
+    Boolean(invitationId) && marketplaceRequired && !cameFromMarketplace
   const [invitationValid, setInvitationValid] = useState<boolean | null>(
-    invitationId ? null : false,
+    needsBackendCheck ? null : false,
   )
 
   useEffect(() => {
-    if (!invitationId || !marketplaceRequired || cameFromMarketplace) {
+    if (!needsBackendCheck) {
       return
     }
-    verifyInvitationPending(invitationId, email).then(({ valid }) => {
+    verifyInvitationPending(invitationId!, email).then(({ valid }) => {
       setInvitationValid(valid)
     })
-  }, [invitationId, email, marketplaceRequired, cameFromMarketplace])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   // While the backend check is in flight, render nothing to avoid a flash of the gate.
   if (invitationValid === null) {
