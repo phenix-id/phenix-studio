@@ -113,6 +113,28 @@ export const createDid = async (
   }
 }
 
+export const generateDidWeb = async (
+  orgId: string,
+  data: object,
+): Promise<AxiosResponse | string> => {
+  const url = `${apiRoutes.organizations.root}/${orgId}${apiRoutes.Agent.generateDidWeb}`
+  const payload = data
+
+  const config = getHeaderConfigs()
+  const axiosPayload = {
+    url,
+    payload,
+    config,
+  }
+
+  try {
+    return await axiosPost(axiosPayload)
+  } catch (error) {
+    const err = error as Error
+    return err?.message
+  }
+}
+
 export const getLedgerConfig = async (): Promise<AxiosResponse | string> => {
   const url = `${apiRoutes.organizations.root}${apiRoutes.Agent.getLedgerConfig}`
   const config = getHeaderConfigs()

@@ -148,6 +148,7 @@ export const apiRoutes = {
     createPolygonKeys: '/agents/polygon/create-keys',
     setAgentConfig: '/agents/configure',
     deleteWallet: '/agents/wallet',
+    generateDidWeb: '/agents/dids/web/generate',
   },
 
   setting: {
