@@ -48,6 +48,18 @@ const isValidUuid = (value: string): boolean =>
     value,
   )
 
+const normalizeDomain = (value: string): string =>
+  value
+    .trim()
+    .replace(/^https?:\/\//i, '')
+    .replace(/\/.*$/, '')
+    .replace(/\/$/, '')
+
+const isValidDomain = (value: string): boolean =>
+  /^[a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?)+$/.test(
+    value,
+  )
+
 const CreateDid = (): React.JSX.Element => {
   const [selectedProtocol, setSelectedProtocol] = useState<Protocol | null>(
     'didcomm',
@@ -135,9 +147,16 @@ const CreateDid = (): React.JSX.Element => {
 
     let isValid = true
 
-    if (selectedDid === 'did:web' && !domainValue.trim()) {
-      setDomainError('Domain is required')
-      isValid = false
+    if (selectedDid === 'did:web') {
+      if (!domainValue.trim()) {
+        setDomainError('Domain is required')
+        isValid = false
+      } else if (!isValidDomain(domainValue)) {
+        setDomainError(
+          'Please enter a valid domain without protocol or path (e.g., example.com)',
+        )
+        isValid = false
+      }
     }
 
     if (!selectedDid) {
@@ -292,8 +311,9 @@ const CreateDid = (): React.JSX.Element => {
   }
 
   const handleDomainChange = (value: string): void => {
-    setDomainValue(value)
-    if (domainError && value.trim()) {
+    const normalized = normalizeDomain(value)
+    setDomainValue(normalized)
+    if (domainError && normalized.trim()) {
       setDomainError(null)
     }
   }
@@ -674,6 +694,7 @@ const CreateDid = (): React.JSX.Element => {
                           size="icon"
                           className="bg-muted/80 h-7 w-7"
                           onClick={copyDidDocument}
+                          aria-label="Copy DID document"
                         >
                           {didDocCopied ? (
                             <Check className="h-3.5 w-3.5" />
@@ -687,6 +708,7 @@ const CreateDid = (): React.JSX.Element => {
                           size="icon"
                           className="bg-muted/80 h-7 w-7"
                           onClick={downloadDidDocument}
+                          aria-label="Download DID document"
                         >
                           <Download className="h-3.5 w-3.5" />
                         </Button>

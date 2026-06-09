@@ -105,11 +105,33 @@ interface IFormValues {
 }
 
 // ---------------------------------------------------------------------------
+// Domain helpers — used by both Zod schema and input handler
+// ---------------------------------------------------------------------------
+
+const normalizeDomain = (value: string): string =>
+  value
+    .trim()
+    .replace(/^https?:\/\//i, '')
+    .replace(/\/.*$/, '')
+    .replace(/\/$/, '')
+
+const isValidDomain = (value: string): boolean =>
+  /^[a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?)+$/.test(
+    value,
+  )
+
+// ---------------------------------------------------------------------------
 // Zod schema — did:web only (RHF)
 // ---------------------------------------------------------------------------
 
 const webDidSchema = z.object({
-  domain: z.string().min(1, 'Domain is required'),
+  domain: z
+    .string()
+    .min(1, 'Domain is required')
+    .refine(
+      (val) => isValidDomain(normalizeDomain(val)),
+      'Please enter a valid domain without protocol or path (e.g., example.com)',
+    ),
 })
 
 type WebDidFormValues = z.infer<typeof webDidSchema>
@@ -276,6 +298,7 @@ const DIDListComponent = ({ orgId }: { orgId: string }): React.JSX.Element => {
   const [isHostingConfirmed, setIsHostingConfirmed] = useState(false)
   const [isGenerating, setIsGenerating] = useState(false)
   const [didDocCopied, setDidDocCopied] = useState(false)
+  const [domainPreview, setDomainPreview] = useState<string>('')
 
   const router = useRouter()
 
@@ -608,6 +631,7 @@ const DIDListComponent = ({ orgId }: { orgId: string }): React.JSX.Element => {
     setIsHostingConfirmed(false)
     setDidDocCopied(false)
     setErrMsg(null)
+    setDomainPreview('')
     webDidForm.reset()
   }
 
@@ -910,6 +934,13 @@ const DIDListComponent = ({ orgId }: { orgId: string }): React.JSX.Element => {
                     {...webDidForm.register('domain')}
                     placeholder="Enter domain (e.g., example.com)"
                     className="mt-1"
+                    onChange={(e) => {
+                      const normalized = normalizeDomain(e.target.value)
+                      webDidForm.setValue('domain', normalized, {
+                        shouldValidate: webDidForm.formState.isSubmitted,
+                      })
+                      setDomainPreview(normalized)
+                    }}
                   />
                   {webDidForm.formState.errors.domain && (
                     <p className="text-destructive mt-1 text-sm">
@@ -920,6 +951,17 @@ const DIDListComponent = ({ orgId }: { orgId: string }): React.JSX.Element => {
                     No protocol or path — just the domain (e.g.,{' '}
                     <span className="font-mono">example.com</span>)
                   </p>
+
+                  {domainPreview && !webDidForm.formState.errors.domain && (
+                    <div className="mt-2 space-y-1">
+                      <p className="text-muted-foreground text-xs font-medium">
+                        Hosting URL
+                      </p>
+                      <p className="bg-muted rounded px-2 py-1.5 font-mono text-xs break-all">
+                        {`https://${domainPreview}/.well-known/did.json`}
+                      </p>
+                    </div>
+                  )}
                 </div>
 
                 <div className="flex justify-end">
@@ -964,6 +1006,7 @@ const DIDListComponent = ({ orgId }: { orgId: string }): React.JSX.Element => {
                         size="icon"
                         className="bg-muted/80 h-7 w-7"
                         onClick={copyDidDocument}
+                        aria-label="Copy DID document"
                       >
                         {didDocCopied ? (
                           <Check className="h-3.5 w-3.5" />
@@ -977,6 +1020,7 @@ const DIDListComponent = ({ orgId }: { orgId: string }): React.JSX.Element => {
                         size="icon"
                         className="bg-muted/80 h-7 w-7"
                         onClick={downloadDidDocument}
+                        aria-label="Download DID document"
                       >
                         <Download className="h-3.5 w-3.5" />
                       </Button>
