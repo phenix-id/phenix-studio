@@ -2,15 +2,12 @@
 /* eslint-disable sort-imports */
 
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import React, { useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 
 import { AlertComponent } from '@/components/AlertComponent'
-import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
-import { Label } from '@/components/ui/label'
 import { Loader } from 'lucide-react'
 import SharedAgentForm from './SharedAgentForm'
 import Stepper from '@/components/StepperComponent'
@@ -44,7 +41,6 @@ export interface WalletResponse {
 }
 
 const WalletSetup = (): React.JSX.Element => {
-  const [agentType, setAgentType] = useState<AgentType>(AgentType.SHARED)
   const [alert, setAlert] = useState<string | null>(null)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const totalSteps = 4
@@ -119,80 +115,21 @@ const WalletSetup = (): React.JSX.Element => {
           </div>
           <Stepper currentStep={2} totalSteps={totalSteps} />
 
-          <RadioGroup
-            value={agentType}
-            onValueChange={(value) => {
-              if (!isAnyWalletCreated && value === AgentType.SHARED) {
-                setAgentType(value as AgentType)
-              }
-            }}
-            className="grid grid-cols-1 gap-6 md:grid-cols-2"
-          >
-            <Label
-              htmlFor="dedicated"
-              aria-disabled="true"
-              className="bg-muted/40 cursor-not-allowed rounded-2xl border border-dashed border-gray-300 p-5 opacity-70 transition-all"
-            >
-              <div className="flex items-start space-x-3">
-                <RadioGroupItem
-                  id="dedicated"
-                  className="border"
-                  value={AgentType.DEDICATED}
-                  disabled
-                />
-
-                <div>
-                  <div className="mb-1 flex flex-wrap items-center gap-2">
-                    <h3 className="text-foreground font-semibold">
-                      Dedicated Agent
-                    </h3>
-                    <Badge variant="outline" className="rounded-full">
-                      Coming soon
-                    </Badge>
-                  </div>
-                  <p className="text-muted-foreground text-sm">
-                    Dedicated agent creation is not available for SaaS
-                    workspaces yet.
-                  </p>
-                  <ul className="text-muted-foreground mt-2 ml-5 list-disc space-y-1 text-sm">
-                    <li>Higher performance and reliability</li>
-                    <li>Enhanced privacy and security</li>
-                    <li>Full control over the agent infrastructure</li>
-                  </ul>
-                </div>
-              </div>
-            </Label>
-
-            <Label
-              htmlFor="shared"
-              className={`cursor-pointer rounded-2xl border p-5 transition-all ${
-                agentType === AgentType.SHARED
-                  ? 'border-primary bg-accent dark:bg-accent shadow-md'
-                  : 'border-border hover:border-primary/50'
-              }`}
-            >
-              <div className="flex items-start space-x-3">
-                <RadioGroupItem
-                  id="shared"
-                  className="border"
-                  value={AgentType.SHARED}
-                />
-                <div>
-                  <h3 className="text-foreground mb-1 font-semibold">
-                    Shared Agent
-                  </h3>
-                  <p className="text-muted-foreground text-sm">
-                    Use our cloud-hosted shared agent infrastructure
-                  </p>
-                  <ul className="text-muted-foreground mt-2 ml-5 list-disc space-y-1 text-sm">
-                    <li>Cost-effective solution</li>
-                    <li>Managed infrastructure</li>
-                    <li>Quick setup with no maintenance</li>
-                  </ul>
-                </div>
-              </div>
-            </Label>
-          </RadioGroup>
+          <div className="border-primary bg-accent dark:bg-accent rounded-2xl border p-5 shadow-md">
+            <div>
+              <h3 className="text-foreground mb-1 font-semibold">
+                Shared Agent
+              </h3>
+              <p className="text-muted-foreground text-sm">
+                Use our cloud-hosted shared agent infrastructure
+              </p>
+              <ul className="text-muted-foreground mt-2 ml-5 list-disc space-y-1 text-sm">
+                <li>Cost-effective solution</li>
+                <li>Managed infrastructure</li>
+                <li>Quick setup with no maintenance</li>
+              </ul>
+            </div>
+          </div>
 
           <div className="mt-10">
             <SharedAgentForm
