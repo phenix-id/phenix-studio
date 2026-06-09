@@ -87,6 +87,7 @@ export const apiRoutes = {
     getById: '/orgs',
     getOrgDashboard: '/orgs/dashboard',
     invitations: '/invitations',
+    verifyInvitationPending: '/invitations/verify-pending',
     orgRoles: '/orgs/roles',
     editUserROle: '/user-roles',
     didList: '/dids',
