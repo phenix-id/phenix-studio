@@ -96,10 +96,10 @@ export default function UserInfoForm({
         setTimeout(() => {
           router.push(
             invitationId
-              ? `/sign-in?email=${email}&fidoFlag=false&method=password&redirectTo=${encodeURIComponent('/invitations')}`
+              ? `/sign-in?email=${encodeURIComponent(email)}&fidoFlag=false&method=password&redirectTo=${encodeURIComponent('/invitations')}`
               : redirectTo && clientAlias
-                ? `/sign-in?signup=true&email=${email}&redirectTo=${encodeURIComponent(redirectTo)}&clientAlias=${clientAlias}&fidoFlag=false&method=password`
-                : `/sign-in?email=${email}&fidoFlag=false&method=password`,
+                ? `/sign-in?signup=true&email=${encodeURIComponent(email)}&redirectTo=${encodeURIComponent(redirectTo)}&clientAlias=${clientAlias}&fidoFlag=false&method=password`
+                : `/sign-in?email=${encodeURIComponent(email)}&fidoFlag=false&method=password`,
           )
         }, 2000)
       } else {

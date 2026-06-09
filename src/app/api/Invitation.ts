@@ -149,15 +149,15 @@ export const getUserEcosystemInvitations = async (
 export const verifyInvitationPending = async (
   invitationId: string,
   email: string,
-): Promise<{ valid: boolean }> => {
-  const url = `${apiRoutes.organizations.root}/invitations/verify-pending?invitationId=${encodeURIComponent(invitationId)}&email=${encodeURIComponent(email)}`
+): Promise<{ valid: boolean; error: boolean }> => {
+  const url = `${apiRoutes.organizations.root}${apiRoutes.organizations.verifyInvitationPending}?invitationId=${encodeURIComponent(invitationId)}&email=${encodeURIComponent(email)}`
   const config = getHeaderConfigs()
 
   try {
     const response = await axiosPublicUserGet({ url, config })
     const { data } = response as AxiosResponse
-    return { valid: Boolean(data?.data?.valid) }
+    return { valid: Boolean(data?.data?.valid), error: false }
   } catch {
-    return { valid: false }
+    return { valid: false, error: true }
   }
 }

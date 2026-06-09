@@ -41,13 +41,20 @@ export default function EmailVerificationForm({
   const invitationId = searchParams?.get('invitationId')
 
   // Send an existing/fully-registered account to sign-in (preserving the marketplace
-  // redirectTo + clientAlias) instead of dead-ending on an error or a redundant signup.
+  // redirectTo + clientAlias, or the invitation redirectTo) instead of dead-ending on
+  // an error or a redundant signup.
   const redirectToSignIn = (emailValue: string): void => {
-    router.push(
-      redirectTo && clientAliasValue
-        ? `/sign-in?redirectTo=${encodeURIComponent(redirectTo)}&clientAlias=${clientAliasValue}&email=${encodeURIComponent(emailValue)}`
-        : `/sign-in?email=${encodeURIComponent(emailValue)}`,
-    )
+    if (redirectTo && clientAliasValue) {
+      router.push(
+        `/sign-in?redirectTo=${encodeURIComponent(redirectTo)}&clientAlias=${clientAliasValue}&email=${encodeURIComponent(emailValue)}`,
+      )
+    } else if (invitationId) {
+      router.push(
+        `/sign-in?redirectTo=${encodeURIComponent('/invitations')}&email=${encodeURIComponent(emailValue)}`,
+      )
+    } else {
+      router.push(`/sign-in?email=${encodeURIComponent(emailValue)}`)
+    }
   }
 
   const validationSchema = Yup.object().shape({
@@ -108,7 +115,7 @@ export default function EmailVerificationForm({
             // In the marketplace funnel, send an existing/complete account to sign-in
             // (carrying the redirectTo) so they can continue onboarding. Outside that
             // funnel, preserve the original inline "already exists" message.
-            if (redirectTo) {
+            if (redirectTo || invitationId) {
               redirectToSignIn(emailValue)
             } else {
               setAddFailure(data?.data?.message)

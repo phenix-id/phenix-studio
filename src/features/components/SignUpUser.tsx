@@ -8,14 +8,19 @@ import Link from 'next/link'
 import UserInfoForm from './UserInfoForm'
 import { useSearchParams } from 'next/navigation'
 
-export default function SignUpUser(): React.JSX.Element {
+interface SignUpUserProps {
+  invitationVerified?: boolean
+}
+
+export default function SignUpUser({
+  invitationVerified,
+}: SignUpUserProps): React.JSX.Element {
   const [step, setStep] = useState(1)
   const [email, setEmail] = useState<string>('')
   const searchParam = useSearchParams()
   const userEmail = searchParam.get('email')
   const redirectTo = searchParam.get('redirectTo')
   const clientAlias = searchParam.get('clientAlias')
-  const invitationId = searchParam.get('invitationId')
 
   const signInUrl =
     redirectTo && clientAlias
@@ -72,7 +77,7 @@ export default function SignUpUser(): React.JSX.Element {
             setEmail={setEmail}
             goToNext={() => setStep(2)}
             locked={
-              (cameFromMarketplace || Boolean(invitationId)) &&
+              (cameFromMarketplace || Boolean(invitationVerified)) &&
               Boolean(userEmail)
             }
           />
