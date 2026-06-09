@@ -1,11 +1,15 @@
 'use client'
 
 import React, { useEffect, useState } from 'react'
+import { Button } from '@/components/ui/button'
 import DynamicApplicationLogo from './DynamicLogo'
+import Loader from '@/components/Loader'
 import SignUpUser from './SignUpUser'
 import { SubscribeRequired } from '@/components/Marketplace/SubscribeRequired'
 import { useSearchParams } from 'next/navigation'
 import { verifyInvitationPending } from '@/app/api/Invitation'
+
+type GateStatus = 'loading' | 'valid' | 'invalid' | 'error'
 
 export default function SignInPage(): React.JSX.Element {
   const searchParams = useSearchParams()
@@ -16,34 +20,70 @@ export default function SignInPage(): React.JSX.Element {
   const marketplaceRequired =
     process.env.NEXT_PUBLIC_MARKETPLACE_REQUIRED === 'true'
 
-  // null = still checking, true/false = result from backend.
-  // Only start in null (loading) state when we will actually call the backend:
-  // needs an invitationId, marketplace mode on, and not already a marketplace flow.
   const needsBackendCheck =
-    Boolean(invitationId) && marketplaceRequired && !cameFromMarketplace
-  const [invitationValid, setInvitationValid] = useState<boolean | null>(
-    needsBackendCheck ? null : false,
+    Boolean(invitationId) &&
+    Boolean(email) &&
+    marketplaceRequired &&
+    !cameFromMarketplace
+
+  const [status, setStatus] = useState<GateStatus>(
+    needsBackendCheck ? 'loading' : 'invalid',
   )
+  const [retryCount, setRetryCount] = useState(0)
 
   useEffect(() => {
-    if (!needsBackendCheck) {
+    if (
+      !invitationId ||
+      !email ||
+      !marketplaceRequired ||
+      cameFromMarketplace
+    ) {
       return
     }
-    verifyInvitationPending(invitationId!, email).then(({ valid }) => {
-      setInvitationValid(valid)
+    let cancelled = false
+    setStatus('loading')
+    verifyInvitationPending(invitationId, email).then(({ valid, error }) => {
+      if (cancelled) {
+        return
+      }
+      setStatus(error ? 'error' : valid ? 'valid' : 'invalid')
     })
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+    return () => {
+      cancelled = true
+    }
+  }, [
+    invitationId,
+    email,
+    marketplaceRequired,
+    cameFromMarketplace,
+    retryCount,
+  ])
 
-  // While the backend check is in flight, render nothing to avoid a flash of the gate.
-  if (invitationValid === null) {
-    return <></>
+  if (status === 'loading') {
+    return (
+      <div className="flex h-screen items-center justify-center">
+        <Loader isExpand={false} />
+      </div>
+    )
+  }
+
+  if (status === 'error') {
+    return (
+      <div className="flex h-screen flex-col items-center justify-center gap-4">
+        <p className="text-muted-foreground text-sm">
+          Unable to verify your invitation. Please try again.
+        </p>
+        <Button variant="outline" onClick={() => setRetryCount((c) => c + 1)}>
+          Retry
+        </Button>
+      </div>
+    )
   }
 
   // Full-page subscribe gate — rendered standalone so the absolute logo overlay
   // and h-screen scroll wrapper from the normal sign-up layout don't interfere.
   // Invited users bypass the gate — their org already has a subscription.
-  if (marketplaceRequired && !cameFromMarketplace && !invitationValid) {
+  if (marketplaceRequired && !cameFromMarketplace && status !== 'valid') {
     return (
       <SubscribeRequired
         fullPage
@@ -59,7 +99,7 @@ export default function SignInPage(): React.JSX.Element {
         <DynamicApplicationLogo />
       </div>
       <div className="relative flex w-full flex-1 items-center justify-center bg-[image:var(--card-gradient)]">
-        <SignUpUser />
+        <SignUpUser invitationVerified={status === 'valid'} />
       </div>
     </div>
   )
