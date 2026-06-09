@@ -85,8 +85,15 @@ export default function EmailVerificationForm({
       const { data } = userRsp as AxiosResponse
 
       if (data?.statusCode === apiStatusCodes.API_STATUS_CREATED) {
-        setEmailSent(true)
         setAddFailure(null)
+        if (data?.data?.isEmailVerified) {
+          // Invited users are already verified via their invitation link — skip the
+          // "check your inbox" step and go straight to the name/password step.
+          setEmail(email)
+          goToNext()
+        } else {
+          setEmailSent(true)
+        }
       } else {
         setAddFailure(userRsp as string)
       }
