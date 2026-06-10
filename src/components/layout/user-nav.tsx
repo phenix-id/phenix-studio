@@ -61,45 +61,34 @@ export function UserNav(): React.JSX.Element | null {
   }
 
   const handleLogout = async (): Promise<void> => {
-    // 1. Best-effort backend session invalidation.
-    //    We proceed with local logout regardless of the response — a failed
-    //    API call (e.g. expired token, network error) must never block sign-out.
-    try {
-      await fetch(
-        `${process.env.NEXT_PUBLIC_BASE_URL}${apiRoutes.auth.signOut}`,
-        {
-          method: 'POST',
-          body: JSON.stringify({ sessions: [sessionId] }),
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`,
-          },
-        },
-      )
-    } catch {
-      // Backend logout failed — continue with local logout
-    }
-
-    // 2. Wipe persisted Redux state so the next page load starts clean.
-    //    removeItem is synchronous; purge() flushes redux-persist's write queue.
+    // Wipe persisted Redux state synchronously before anything async runs.
     localStorage.removeItem('persist:root')
-    await persistor.purge()
 
-    // 3. Clear the NextAuth session cookie (server-side) without relying on
-    //    NextAuth's redirect callback to navigate us. redirect:false means
-    //    NextAuth invalidates the cookie and returns — we drive navigation.
-    try {
-      await signOut({ redirect: false })
-    } catch {
-      // If NextAuth signOut fails, still force-navigate below
-    }
+    // Run all three cleanup operations in parallel — they are fully independent.
+    // Each failure is caught individually so one failure never blocks the others
+    // or prevents navigation.
+    const ignoreError = (): void => undefined
 
-    // 4. Hard navigate — bypasses SPA routing entirely so no React component
-    //    re-renders between now and the sign-in page appearing.
-    //    IMPORTANT: do NOT dispatch any Redux actions before this point.
-    //    Any state mutation here re-renders the still-mounted page, causing
-    //    the visible "dashboard with no tokens" flash. Redux state is destroyed
-    //    automatically when the page reloads, so no manual cleanup is needed.
+    await Promise.all([
+      // Best-effort backend session invalidation.
+      fetch(`${process.env.NEXT_PUBLIC_BASE_URL}${apiRoutes.auth.signOut}`, {
+        method: 'POST',
+        body: JSON.stringify({ sessions: [sessionId] }),
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+      }).catch(ignoreError),
+
+      // Flush redux-persist's write queue.
+      persistor.purge().catch(ignoreError),
+
+      // Clear the NextAuth session cookie server-side.
+      signOut({ redirect: false }).catch(ignoreError),
+    ])
+
+    // Hard navigate — bypasses SPA routing so no React component re-renders
+    // between now and the sign-in page appearing.
     window.location.href = '/sign-in'
   }
 

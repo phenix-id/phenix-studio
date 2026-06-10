@@ -238,7 +238,7 @@ const SchemaCard = (props: Readonly<ISchemaCardProps>): React.JSX.Element => {
         {props.schemaName}
       </h3>
       <p className="text-muted-foreground relative mt-0.5 text-[11.5px]">
-        Version: {props.version}
+        Version: v{props.version}
       </p>
 
       {/* ── Schema ID — clicking opens the side panel, not the card action ── */}

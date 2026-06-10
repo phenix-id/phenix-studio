@@ -161,7 +161,7 @@ const OobIssuance = (): React.JSX.Element => {
           (res.data?.data ?? []).map((value: any, index: number) => ({
             schemaVersion: value.schemaVersion,
             value: value.schemaAttributes,
-            label: value.schemaCredDefName,
+            label: `${value.schemaName} [v${value.schemaVersion}]`,
             id: index,
             schemaId: isW3c ? value.schemaIdentifier : value.schemaLedgerId,
             credentialId: value.credentialDefinitionId,
