@@ -38,6 +38,7 @@ import SetPrivateKeyValueInput from './SetPrivateKeyValue'
 import Stepper from '@/components/StepperComponent'
 import TooltipInfo from '@/components/TooltipInfo'
 import { createDid, generateDidWeb } from '@/app/api/Agent'
+import { formatDidWebError } from './formatDidWebError'
 import { getOrganizationById } from '@/app/api/organization'
 import { hardNavigate } from '@/utils/navigation'
 import { useAppSelector } from '@/lib/hooks'
@@ -217,23 +218,7 @@ const CreateDid = (): React.JSX.Element => {
       // createDid returns a string on any error (network, 4xx, 5xx) — the string
       // IS the backend message, normalised by HandleResponse. Use it directly.
       if (typeof spinupRes === 'string') {
-        if (
-          selectedDid === 'did:web' &&
-          spinupRes.toLowerCase().includes('not reachable')
-        ) {
-          setAlert(
-            'DID document not found at the hosting URL. Make sure the file is publicly accessible, then try again.',
-          )
-        } else if (
-          selectedDid === 'did:web' &&
-          spinupRes.toLowerCase().includes('does not match')
-        ) {
-          setAlert(
-            'The hosted document does not match the generated one. Use the copy or download button to get the exact document and replace the file at your domain.',
-          )
-        } else {
-          setAlert(spinupRes || 'Failed to create DID')
-        }
+        setAlert(formatDidWebError(spinupRes))
         setSuccess(null)
         return
       }
@@ -267,23 +252,7 @@ const CreateDid = (): React.JSX.Element => {
         }
       } else {
         const msg = typeof data?.message === 'string' ? data.message : ''
-        if (
-          selectedDid === 'did:web' &&
-          msg.toLowerCase().includes('not reachable')
-        ) {
-          setAlert(
-            'DID document not found at the hosting URL. Make sure the file is publicly accessible, then try again.',
-          )
-        } else if (
-          selectedDid === 'did:web' &&
-          msg.toLowerCase().includes('does not match')
-        ) {
-          setAlert(
-            'The hosted document does not match the generated one. Use the copy or download button to get the exact document and replace the file at your domain.',
-          )
-        } else {
-          setAlert(msg || 'Failed to create DID')
-        }
+        setAlert(formatDidWebError(msg))
         setSuccess(null)
       }
     } catch (error) {

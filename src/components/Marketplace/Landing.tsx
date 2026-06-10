@@ -11,18 +11,17 @@ import { AxiosResponse } from 'axios'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Label } from '@/components/ui/label'
+import { MARKETPLACE_LEGAL_ACCEPTANCE_KEY } from '@/config/marketplaceLegal'
 import { MarketplaceLegalInfo } from './MarketplaceLegalInfo'
 import { MarketplacePlanSummary } from './MarketplacePlanSummary'
 import { apiStatusCodes } from '@/config/CommonConstant'
 import { checkUserExist } from '@/app/api/Auth'
-import { marketplaceLegal } from '@/config/marketplaceLegal'
 import { pathRoutes } from '@/config/pathRoutes'
 import { setOrgId } from '@/lib/orgSlice'
 import { useAppDispatch } from '@/lib/hooks'
 import { useSession } from 'next-auth/react'
 
 const ONBOARDING_SESSION_KEY = 'marketplaceOnboardingSessionId'
-const MARKETPLACE_LEGAL_ACCEPTANCE_KEY = `marketplaceLegalAccepted:${marketplaceLegal.lastUpdated}`
 
 function extractData<T>(response: AxiosResponse | string): T | null {
   if (typeof response === 'string') {

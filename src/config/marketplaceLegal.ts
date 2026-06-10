@@ -31,6 +31,15 @@ export const marketplaceLegal = {
   lastUpdated: 'May 28, 2026',
 }
 
+/**
+ * localStorage key used to record that the user has accepted the current
+ * version of the Marketplace legal terms. Versioned by lastUpdated so that
+ * updating the legal documents automatically invalidates prior acceptances.
+ * Defined here — the single source of truth — so Landing.tsx and
+ * OnboardingWizard.tsx always agree on the key formula.
+ */
+export const MARKETPLACE_LEGAL_ACCEPTANCE_KEY = `marketplaceLegalAccepted:${marketplaceLegal.lastUpdated}`
+
 export const marketplaceTrustItems = [
   {
     title: 'Privacy policy',
