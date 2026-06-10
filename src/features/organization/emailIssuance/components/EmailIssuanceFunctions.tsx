@@ -282,7 +282,7 @@ const mapW3CCredentialDefs = (credentialDefs: any): any =>
   credentialDefs.map(
     ({ name, version, schemaLedgerId, attributes, type }: ICredentials) => ({
       value: version,
-      label: `${name} [${version}]`,
+      label: `${name} [v${version}]`,
       schemaName: name,
       type,
       schemaVersion: version,

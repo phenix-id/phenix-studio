@@ -28,12 +28,20 @@ function SchemaVersion({
       </div>
 
       <div className="flex-col md:flex">
-        <Field
-          id="schemaVersion"
-          name="schemaVersion"
-          placeholder="eg. 1.0 or 1.1"
-          className="border-input file:text-foreground placeholder:text-muted-foreground/50 focus-visible:ring-ring flex h-9 w-full rounded-md border bg-transparent px-3 py-1 text-base shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium focus-visible:ring-1 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50 md:text-sm"
-        />
+        <div className="relative">
+          <span
+            aria-hidden="true"
+            className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-sm select-none"
+          >
+            v
+          </span>
+          <Field
+            id="schemaVersion"
+            name="schemaVersion"
+            placeholder="1.0 or 1.1"
+            className="border-input placeholder:text-muted-foreground/50 focus-visible:ring-ring flex h-9 w-full rounded-md border bg-transparent py-1 pr-3 pl-6 text-base shadow-sm transition-colors focus-visible:ring-1 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50 md:text-sm"
+          />
+        </div>
         {formikHandlers.touched.schemaVersion &&
         formikHandlers.errors.schemaVersion ? (
           <label

@@ -82,16 +82,16 @@ export function MarketplaceLanding(): React.JSX.Element {
     setAcceptedTerms(checked)
 
     if (checked) {
-      sessionStorage.setItem(MARKETPLACE_LEGAL_ACCEPTANCE_KEY, 'true')
+      localStorage.setItem(MARKETPLACE_LEGAL_ACCEPTANCE_KEY, 'true')
       return
     }
 
-    sessionStorage.removeItem(MARKETPLACE_LEGAL_ACCEPTANCE_KEY)
+    localStorage.removeItem(MARKETPLACE_LEGAL_ACCEPTANCE_KEY)
   }
 
   useEffect(() => {
     const accepted =
-      sessionStorage.getItem(MARKETPLACE_LEGAL_ACCEPTANCE_KEY) === 'true'
+      localStorage.getItem(MARKETPLACE_LEGAL_ACCEPTANCE_KEY) === 'true'
     initiallyAcceptedRef.current = accepted
     setAcceptedTerms(accepted)
   }, [])

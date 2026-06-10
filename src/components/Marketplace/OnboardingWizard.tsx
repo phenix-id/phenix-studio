@@ -24,12 +24,14 @@ import { Label } from '@/components/ui/label'
 import { MarketplacePlanSummary } from './MarketplacePlanSummary'
 import { Textarea } from '@/components/ui/textarea'
 import { getOrganizations } from '@/app/api/organization'
+import { marketplaceLegal } from '@/config/marketplaceLegal'
 import { pathRoutes } from '@/config/pathRoutes'
 import { setOrgId } from '@/lib/orgSlice'
 import { useAppDispatch } from '@/lib/hooks'
 import { useSession } from 'next-auth/react'
 
 const ONBOARDING_SESSION_KEY = 'marketplaceOnboardingSessionId'
+const MARKETPLACE_LEGAL_ACCEPTANCE_KEY = `marketplaceLegalAccepted:${marketplaceLegal.lastUpdated}`
 
 interface OrganizationLinkResponse {
   orgId?: string
@@ -190,6 +192,11 @@ export function OnboardingWizard(): React.JSX.Element {
     loadOwnedOrgs()
   }, [accountLinked, orgId])
 
+  const completeOnboarding = (): void => {
+    localStorage.removeItem(MARKETPLACE_LEGAL_ACCEPTANCE_KEY)
+    router.push(pathRoutes.marketplace.success)
+  }
+
   // Link the chosen org (existing or newly created) to the subscription, then activate.
   const linkAndActivate = async (): Promise<void> => {
     if (!sessionId) {
@@ -266,7 +273,7 @@ export function OnboardingWizard(): React.JSX.Element {
       return
     }
 
-    router.push(pathRoutes.marketplace.success)
+    completeOnboarding()
   }
 
   const activateExistingOrganization = async (): Promise<void> => {
@@ -284,7 +291,7 @@ export function OnboardingWizard(): React.JSX.Element {
       return
     }
 
-    router.push(pathRoutes.marketplace.success)
+    completeOnboarding()
   }
 
   return (

@@ -679,7 +679,13 @@ const DIDListComponent = ({ orgId }: { orgId: string }): React.JSX.Element => {
 
     try {
       const response = await generateDidWeb(orgId, payload)
-      const { data } = response as AxiosResponse
+
+      if (typeof response === 'string') {
+        setErrMsg(response || 'Failed to generate DID document')
+        return
+      }
+
+      const { data } = response
 
       if (data?.statusCode === apiStatusCodes.API_STATUS_SUCCESS) {
         setGeneratedDidDoc(data?.data?.didDocument)
@@ -716,7 +722,25 @@ const DIDListComponent = ({ orgId }: { orgId: string }): React.JSX.Element => {
 
     try {
       const response = await createDid(orgId, didData)
-      const { data } = response as AxiosResponse
+
+      // createDid returns a string on any error (network, 4xx, 5xx) — the string
+      // IS the backend message, normalised by HandleResponse. Use it directly.
+      if (typeof response === 'string') {
+        if (response.toLowerCase().includes('not reachable')) {
+          setErrMsg(
+            'DID document not found at the hosting URL. Make sure the file is publicly accessible, then try again.',
+          )
+        } else if (response.toLowerCase().includes('does not match')) {
+          setErrMsg(
+            'The hosted document does not match the generated one. Use the copy or download button to get the exact document and replace the file at your domain.',
+          )
+        } else {
+          setErrMsg(response || 'Failed to create DID')
+        }
+        return
+      }
+
+      const { data } = response
 
       if (data?.statusCode === apiStatusCodes.API_STATUS_CREATED) {
         setShowPopup(false)
@@ -725,14 +749,18 @@ const DIDListComponent = ({ orgId }: { orgId: string }): React.JSX.Element => {
         await getData()
         setTimeout(() => router.refresh(), 2000)
       } else {
-        const isMismatch =
-          typeof data?.message === 'string' &&
-          data.message.toLowerCase().includes('does not match')
-        setErrMsg(
-          isMismatch
-            ? "Document not hosted or doesn't match. Re-check the file at your domain and try again."
-            : data?.message || 'Failed to create DID',
-        )
+        const msg = typeof data?.message === 'string' ? data.message : ''
+        if (msg.toLowerCase().includes('not reachable')) {
+          setErrMsg(
+            'DID document not found at the hosting URL. Make sure the file is publicly accessible, then try again.',
+          )
+        } else if (msg.toLowerCase().includes('does not match')) {
+          setErrMsg(
+            'The hosted document does not match the generated one. Use the copy or download button to get the exact document and replace the file at your domain.',
+          )
+        } else {
+          setErrMsg(msg || 'Failed to create DID')
+        }
       }
     } catch (error) {
       console.error('Error creating did:web:', error)

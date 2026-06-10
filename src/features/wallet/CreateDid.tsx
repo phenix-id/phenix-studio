@@ -213,7 +213,32 @@ const CreateDid = (): React.JSX.Element => {
       }
 
       const spinupRes = await createDid(orgId!, payload)
-      const { data } = spinupRes as AxiosResponse
+
+      // createDid returns a string on any error (network, 4xx, 5xx) — the string
+      // IS the backend message, normalised by HandleResponse. Use it directly.
+      if (typeof spinupRes === 'string') {
+        if (
+          selectedDid === 'did:web' &&
+          spinupRes.toLowerCase().includes('not reachable')
+        ) {
+          setAlert(
+            'DID document not found at the hosting URL. Make sure the file is publicly accessible, then try again.',
+          )
+        } else if (
+          selectedDid === 'did:web' &&
+          spinupRes.toLowerCase().includes('does not match')
+        ) {
+          setAlert(
+            'The hosted document does not match the generated one. Use the copy or download button to get the exact document and replace the file at your domain.',
+          )
+        } else {
+          setAlert(spinupRes || 'Failed to create DID')
+        }
+        setSuccess(null)
+        return
+      }
+
+      const { data } = spinupRes
 
       if (data?.statusCode === apiStatusCodes.API_STATUS_CREATED) {
         const generatedDid = data?.did || data?.data?.did || data?.result?.did
@@ -241,7 +266,24 @@ const CreateDid = (): React.JSX.Element => {
           hardNavigate(`/did-details?${params.toString()}`)
         }
       } else {
-        setAlert(data?.message || 'Failed to create DID')
+        const msg = typeof data?.message === 'string' ? data.message : ''
+        if (
+          selectedDid === 'did:web' &&
+          msg.toLowerCase().includes('not reachable')
+        ) {
+          setAlert(
+            'DID document not found at the hosting URL. Make sure the file is publicly accessible, then try again.',
+          )
+        } else if (
+          selectedDid === 'did:web' &&
+          msg.toLowerCase().includes('does not match')
+        ) {
+          setAlert(
+            'The hosted document does not match the generated one. Use the copy or download button to get the exact document and replace the file at your domain.',
+          )
+        } else {
+          setAlert(msg || 'Failed to create DID')
+        }
         setSuccess(null)
       }
     } catch (error) {
@@ -266,7 +308,14 @@ const CreateDid = (): React.JSX.Element => {
 
     try {
       const res = await generateDidWeb(orgId!, payload)
-      const { data } = res as AxiosResponse
+
+      if (typeof res === 'string') {
+        setAlert(res || 'Failed to generate DID document')
+        setWebFlowState('idle')
+        return
+      }
+
+      const { data } = res
 
       if (data?.statusCode === apiStatusCodes.API_STATUS_SUCCESS) {
         setGeneratedDidDoc(data?.data?.didDocument)

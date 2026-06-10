@@ -377,7 +377,7 @@ export const getSchemaCredentials = async (
             }
             return {
               value: version,
-              label: `${name} [${version}]`,
+              label: `${name} [v${version}]`,
               schemaName: name,
               type,
               schemaVersion: version,
