@@ -145,7 +145,7 @@ const EmailIssuance = (): JSX.Element => {
       const attributes = JSON.parse(credentials.value)
       const data = {
         value: credentials.schemaVersion,
-        label: `${credentials.schemaName} [${credentials.schemaVersion}]`,
+        label: `${credentials.schemaName} [v${credentials.schemaVersion}]`,
         schemaName: credentials.schemaName,
         schemaVersion: credentials.schemaVersion,
         schemaIdentifier: credentials.schemaIdentifier,
