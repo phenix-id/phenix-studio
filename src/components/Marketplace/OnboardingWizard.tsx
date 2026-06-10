@@ -21,17 +21,16 @@ import { AxiosResponse } from 'axios'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { MARKETPLACE_LEGAL_ACCEPTANCE_KEY } from '@/config/marketplaceLegal'
 import { MarketplacePlanSummary } from './MarketplacePlanSummary'
 import { Textarea } from '@/components/ui/textarea'
 import { getOrganizations } from '@/app/api/organization'
-import { marketplaceLegal } from '@/config/marketplaceLegal'
 import { pathRoutes } from '@/config/pathRoutes'
 import { setOrgId } from '@/lib/orgSlice'
 import { useAppDispatch } from '@/lib/hooks'
 import { useSession } from 'next-auth/react'
 
 const ONBOARDING_SESSION_KEY = 'marketplaceOnboardingSessionId'
-const MARKETPLACE_LEGAL_ACCEPTANCE_KEY = `marketplaceLegalAccepted:${marketplaceLegal.lastUpdated}`
 
 interface OrganizationLinkResponse {
   orgId?: string

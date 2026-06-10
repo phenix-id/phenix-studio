@@ -48,6 +48,7 @@ import { Label } from '@/components/ui/label'
 import Loader from '@/components/Loader'
 import { dateConversion } from '@/utils/DateConversion'
 import { ethers } from 'ethers'
+import { formatDidWebError } from './formatDidWebError'
 import { nanoid } from 'nanoid'
 import { useRouter } from 'next/navigation'
 
@@ -726,17 +727,7 @@ const DIDListComponent = ({ orgId }: { orgId: string }): React.JSX.Element => {
       // createDid returns a string on any error (network, 4xx, 5xx) — the string
       // IS the backend message, normalised by HandleResponse. Use it directly.
       if (typeof response === 'string') {
-        if (response.toLowerCase().includes('not reachable')) {
-          setErrMsg(
-            'DID document not found at the hosting URL. Make sure the file is publicly accessible, then try again.',
-          )
-        } else if (response.toLowerCase().includes('does not match')) {
-          setErrMsg(
-            'The hosted document does not match the generated one. Use the copy or download button to get the exact document and replace the file at your domain.',
-          )
-        } else {
-          setErrMsg(response || 'Failed to create DID')
-        }
+        setErrMsg(formatDidWebError(response))
         return
       }
 
@@ -750,17 +741,7 @@ const DIDListComponent = ({ orgId }: { orgId: string }): React.JSX.Element => {
         setTimeout(() => router.refresh(), 2000)
       } else {
         const msg = typeof data?.message === 'string' ? data.message : ''
-        if (msg.toLowerCase().includes('not reachable')) {
-          setErrMsg(
-            'DID document not found at the hosting URL. Make sure the file is publicly accessible, then try again.',
-          )
-        } else if (msg.toLowerCase().includes('does not match')) {
-          setErrMsg(
-            'The hosted document does not match the generated one. Use the copy or download button to get the exact document and replace the file at your domain.',
-          )
-        } else {
-          setErrMsg(msg || 'Failed to create DID')
-        }
+        setErrMsg(formatDidWebError(msg))
       }
     } catch (error) {
       console.error('Error creating did:web:', error)
