@@ -82,13 +82,28 @@ export default function EmailVerificationForm({
       }
 
       const userRsp = await sendVerificationMail(payload)
-      const { data } = userRsp as AxiosResponse
+
+      // On error the API wrapper returns a string message, not an AxiosResponse. Guard
+      // before reading .data — this branch now gates goToNext(), so the cast is load-bearing.
+      if (typeof userRsp === 'string') {
+        setAddFailure(userRsp)
+        return
+      }
+
+      const { data } = userRsp
 
       if (data?.statusCode === apiStatusCodes.API_STATUS_CREATED) {
-        setEmailSent(true)
         setAddFailure(null)
+        if (data?.data?.isEmailVerified) {
+          // Invited users are already verified via their invitation link — skip the
+          // "check your inbox" step and go straight to the name/password step.
+          setEmail(email)
+          goToNext()
+        } else {
+          setEmailSent(true)
+        }
       } else {
-        setAddFailure(userRsp as string)
+        setAddFailure(data?.data?.message ?? 'Something went wrong.')
       }
     } catch (err) {
       // eslint-disable-next-line no-console
