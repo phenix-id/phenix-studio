@@ -319,9 +319,11 @@ const VerificationCredentialList = (): JSX.Element => {
             }}
           >
             {String(
-              email && email !== 'Not Available'
-                ? `**${email.slice(2)}`
-                : connection,
+              connection !== '--/--'
+                ? connection
+                : email && email !== 'Not Available'
+                  ? `**${email.slice(2)}`
+                  : '--/--',
             )}
           </button>
         )
