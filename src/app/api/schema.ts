@@ -10,10 +10,26 @@ import apiRoutes from './apiRoutes'
 import { getHeaderConfigs } from '@/config/GetHeaderConfigs'
 
 const config = getHeaderConfigs()
+export interface ApiErrorResponse {
+  message: string
+  statusCode?: number
+  code?: string
+}
+
+const getApiErrorResponse = (error: unknown): ApiErrorResponse => {
+  const err = error as Error & { statusCode?: number; code?: string }
+
+  return {
+    message: err?.message || 'Something went wrong, please try later...',
+    statusCode: err?.statusCode,
+    code: err?.code,
+  }
+}
+
 export const createSchemas = async (
   payload: Record<string, unknown>,
   orgId: string,
-): Promise<AxiosResponse | string> => {
+): Promise<AxiosResponse | ApiErrorResponse> => {
   const details = {
     url: `${apiRoutes.organizations.root}/${orgId}${apiRoutes.schema.create}`,
     payload,
@@ -24,8 +40,7 @@ export const createSchemas = async (
     const response = await axiosPost(details)
     return response
   } catch (error) {
-    const err = error as Error
-    return err?.message
+    return getApiErrorResponse(error)
   }
 }
 

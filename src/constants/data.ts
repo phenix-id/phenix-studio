@@ -51,20 +51,44 @@ export const navItems: NavItem[] = [
     ],
   },
   {
-    title: 'Trust',
-    url: '#', // Placeholder as there is no direct link for the parent
-    icon: 'billing',
-    isActive: true,
-
-    items: [
-      {
-        title: 'x509',
-        shortcut: ['l', 'l'],
-        url: '/x509-certificate',
-        icon: 'login',
-      },
-    ],
+    title: 'Schemas',
+    url: '/schemas',
+    icon: 'schemas',
+    shortcut: ['s', 's'],
+    isActive: false,
+    items: [],
   },
+  {
+    title: 'Users',
+    url: '/users',
+    icon: 'users',
+    shortcut: ['u', 'u'],
+    isActive: false,
+    items: [],
+  },
+  {
+    title: 'Billing',
+    url: '/organizations/billing',
+    icon: 'billing',
+    shortcut: ['b', 'b'],
+    isActive: false,
+    items: [],
+  },
+  // Trust > x509 — hidden until ready for release
+  // {
+  //   title: 'Trust',
+  //   url: '#', // Placeholder as there is no direct link for the parent
+  //   icon: 'billing',
+  //   isActive: true,
+  //   items: [
+  //     {
+  //       title: 'x509',
+  //       shortcut: ['l', 'l'],
+  //       url: '/x509-certificate',
+  //       icon: 'login',
+  //     },
+  //   ],
+  // },
 ]
 
 export interface saleuser {

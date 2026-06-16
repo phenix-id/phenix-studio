@@ -1,9 +1,9 @@
 'use client'
 
 import { JSX, useEffect } from 'react'
-import { useDispatch, useSelector } from 'react-redux'
-
-import { RootState } from '@/lib/store'
+import { Mail, QrCode, Users } from 'lucide-react'
+import { useAppDispatch, useAppSelector } from '@/lib/hooks'
+import { IOptions } from './types/Dashboard'
 import SelectionDashboard from './SelectionDashboard'
 import { getOrganizationById } from '@/app/api/organization'
 import { pathRoutes } from '@/config/pathRoutes'
@@ -12,10 +12,10 @@ import { usePathname } from 'next/navigation'
 
 const SelectionDashboardData = (): JSX.Element => {
   const path = usePathname()
-
-  const dispatch = useDispatch()
+  const dispatch = useAppDispatch()
   const isVerification = path.includes('/verification')
-  const orgId = useSelector((state: RootState) => state.organization.orgId)
+  const orgId = useAppSelector((state) => state.organization.orgId)
+
   const orgData = async (): Promise<void> => {
     const response = await getOrganizationById(orgId)
     if (typeof response === 'string') {
@@ -25,52 +25,108 @@ const SelectionDashboardData = (): JSX.Element => {
       dispatch(setLedgerId(data.data.org_agents[0].ledgers.id))
     }
   }
+
   useEffect(() => {
     orgData()
   }, [])
 
-  const issueOptions = [
+  const issueOptions: IOptions[] = [
     {
       heading: 'Connection',
+      icon: Users,
       description:
-        'Issue credential(s) by selecting connection from existing users',
+        "Issue credential(s) to a holder you're already connected with — no new invitation required.",
       path: '/credentials/connections',
+      tag: 'Existing holders',
+      tagVariant: 'neutral',
     },
     {
       heading: 'Email',
-      description: 'Issue credential(s) by entering email ID for specific user',
+      icon: Mail,
+      description:
+        'Send a credential offer to a specific holder by email address. They accept in the PHENIX ID App.',
       path: pathRoutes.organizations.Issuance.email,
+      tag: 'Single holder',
+      tagVariant: 'neutral',
     },
+    // Bulk issuance — hidden until ready for release
+    // {
+    //   heading: 'Bulk',
+    //   icon: FileSpreadsheet,
+    //   description:
+    //     'Issue to many holders at once by uploading a .CSV of records mapped to your schema.',
+    //   path: pathRoutes.organizations.Issuance.bulkIssuance,
+    //   tag: '.CSV upload',
+    //   tagVariant: 'purple',
+    // },
     {
-      heading: 'Bulk',
-      description: 'Issue credential(s) by uploading .csv file records',
-      path: pathRoutes.organizations.Issuance.bulkIssuance,
+      heading: 'QR Code',
+      icon: QrCode,
+      description:
+        'Generate a scannable QR code that issues on scan — no prior connection needed.',
+      path: pathRoutes.organizations.Issuance.connectionOob,
+      tag: 'No connection needed',
+      tagVariant: 'green',
+      isRecommended: true,
     },
   ]
 
-  const verifyOptions = [
+  const verifyOptions: IOptions[] = [
     {
       heading: 'Connection',
-      description: 'Verify credential(s) by selecting existing connections',
+      icon: Users,
+      description:
+        "Request a verifiable presentation from a holder you're already connected with.",
       path: pathRoutes.organizations.verification.schema,
+      tag: 'Existing holders',
+      tagVariant: 'neutral',
     },
     {
       heading: 'Email',
+      icon: Mail,
       description:
-        'Verify credential(s) by entering email ID for specific user',
+        'Send a proof request to a specific holder by email address. They respond in the PHENIX ID App.',
       path: pathRoutes.organizations.verification.email,
+      tag: 'Single holder',
+      tagVariant: 'neutral',
     },
+    // Bulk verification — hidden until ready for release
+    // {
+    //   heading: 'Bulk',
+    //   icon: FileSpreadsheet,
+    //   description:
+    //     'Verify credentials from many holders at once by uploading a .CSV of records.',
+    //   path: '',
+    //   tag: '.CSV upload',
+    //   tagVariant: 'purple',
+    // },
     {
-      heading: 'Bulk',
+      heading: 'QR Code',
+      icon: QrCode,
       description:
-        'Verify credential(s) in bulk by uploading .csv file records',
-      path: '',
+        'Generate a scannable QR code that requests a proof — no prior connection needed.',
+      path: pathRoutes.organizations.verification.email,
+      tag: 'No connection needed',
+      tagVariant: 'green',
+      isRecommended: true,
     },
   ]
+
   return (
     <SelectionDashboard
-      title={isVerification ? 'Verify Credential' : 'Issue Credential'}
+      eyebrow={isVerification ? 'VERIFY CREDENTIAL' : 'ISSUE CREDENTIAL'}
+      title={
+        isVerification
+          ? 'How would you like to verify?'
+          : 'How would you like to issue?'
+      }
+      subtitle={
+        isVerification
+          ? 'Choose how the proof request reaches your holders. You can review before anything is sent.'
+          : 'Choose how the credential offer reaches your holders. You can sign and review before anything is sent.'
+      }
       options={isVerification ? verifyOptions : issueOptions}
+      gridCols={3}
       backButtonPath={
         isVerification
           ? pathRoutes.organizations.credentials

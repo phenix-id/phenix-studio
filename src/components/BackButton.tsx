@@ -4,22 +4,21 @@ import { JSX, useState } from 'react'
 import { ArrowLeft } from 'lucide-react'
 import { Button } from './ui/button'
 import Loader from './Loader'
-import { useRouter } from 'next/navigation'
+import { hardNavigate } from '@/utils/navigation'
 
 interface BackButtonProps {
   path?: string
 }
 
 const BackButton = ({ path }: BackButtonProps): JSX.Element => {
-  const router = useRouter()
   const [isLoading, setIsLoading] = useState(false)
 
   const handleClick = (): void => {
     setIsLoading(true)
     if (path) {
-      router.push(path)
+      hardNavigate(path)
     } else {
-      router.back()
+      window.history.back()
     }
 
     setTimeout(() => setIsLoading(false), 2000)

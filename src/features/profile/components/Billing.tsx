@@ -60,7 +60,7 @@ export default function Billing(): JSX.Element {
             {plan.name === 'FREE' ? (
               <button
                 disabled
-                className="bg-secondary w-full cursor-not-allowed rounded-lg px-4 py-2 text-center font-medium text-black"
+                className="bg-secondary text-foreground w-full cursor-not-allowed rounded-lg px-4 py-2 text-center font-medium"
               >
                 {plan.buttonLabel}
               </button>

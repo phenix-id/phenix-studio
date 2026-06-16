@@ -2,7 +2,9 @@
 
 import * as z from 'zod'
 
-import { Eye, EyeOff, KeyRound, LockKeyhole, Mail } from 'lucide-react'
+import { Eye, EyeOff, LockKeyhole, Mail } from 'lucide-react'
+// KeyRound — used by passkey tab (hidden until ready for release)
+// import { KeyRound } from 'lucide-react'
 import {
   Form,
   FormControl,
@@ -24,6 +26,7 @@ import Link from 'next/link'
 import Loader from '@/components/Loader'
 import { apiStatusCodes } from '@/config/CommonConstant'
 import { generateAuthenticationOption } from '@/app/api/Fido'
+import { safeInternalRedirect } from '@/utils/safeRedirect'
 import { setProfile } from '@/lib/profileSlice'
 import { signIn } from 'next-auth/react'
 import { startAuthentication } from '@simplewebauthn/browser'
@@ -44,7 +47,8 @@ enum PlatformRoles {
 }
 
 export default function SignInViewPage(): React.JSX.Element {
-  const [isPasswordTab, setIsPasswordTab] = useState(true)
+  // setIsPasswordTab only used by passkey toggle (hidden until ready for release)
+  const [isPasswordTab] = useState(true)
   const [loading, setLoading] = useState(false)
   const [forgetPasswordLoading, setForgetPasswordLoading] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
@@ -105,8 +109,9 @@ export default function SignInViewPage(): React.JSX.Element {
         }
         setAlert(errorMsg)
         console.error('Sign in failed:', response.error)
+        setLoading(false)
       }
-      setLoading(false)
+      // On success: keep loading=true until SessionManager redirects and unmounts this component
     } catch (error) {
       setAlert('Something went wrong during sign in. Please try again.')
       setLoading(false)
@@ -221,10 +226,14 @@ export default function SignInViewPage(): React.JSX.Element {
           return
         }
 
-        route.push(
+        const defaultRoute =
           userRole?.role?.name === PlatformRoles.platformAdmin
             ? '/dashboard/settings'
-            : '/dashboard',
+            : '/dashboard'
+        route.push(
+          redirectTo
+            ? safeInternalRedirect(redirectTo, defaultRoute)
+            : defaultRoute,
         )
       } else if (verificationResp?.error) {
         console.error(verificationResp?.error)
@@ -239,8 +248,8 @@ export default function SignInViewPage(): React.JSX.Element {
         // eslint-disable-next-line no-console
         console.error('FIDO Authentication Error:', error)
       }
-    } finally {
       setLoading(false)
+      // On success: keep loading=true until route.push navigation completes
     }
   }
 
@@ -310,6 +319,7 @@ export default function SignInViewPage(): React.JSX.Element {
           </p>
         </div>
 
+        {/* Passkey tab toggle — hidden until passkey feature is ready for release
         <div className="bg-muted mb-4 flex h-10 overflow-hidden rounded-md p-1 text-sm font-medium">
           <button
             type="button"
@@ -336,6 +346,7 @@ export default function SignInViewPage(): React.JSX.Element {
             Passkey
           </button>
         </div>
+        */}
 
         <Form {...signInForm}>
           <form onSubmit={handleFormSubmit} className="space-y-4">
@@ -424,7 +435,11 @@ export default function SignInViewPage(): React.JSX.Element {
               className="w-full text-xs md:text-sm"
             >
               {loading && <Loader size={20} isExpand={false} />}
-              {isPasswordTab ? 'Sign in' : 'Continue with passkey'}
+              {loading
+                ? 'Signing in...'
+                : isPasswordTab
+                  ? 'Sign in'
+                  : 'Continue with passkey'}
             </Button>
 
             {process.env.NEXT_PUBLIC_ENABLE_SOCIAL_LOGIN?.toLowerCase() ===

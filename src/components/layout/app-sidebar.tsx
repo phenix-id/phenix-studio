@@ -1,4 +1,5 @@
 'use client'
+/* eslint-disable sort-imports */
 
 import {
   Collapsible,
@@ -6,6 +7,7 @@ import {
   CollapsibleTrigger,
 } from '@/components/ui/collapsible'
 import React, { JSX, useEffect, useState } from 'react'
+import { useTheme } from 'next-themes'
 import {
   Sidebar,
   SidebarContent,
@@ -19,50 +21,60 @@ import {
   SidebarMenuSubItem,
   SidebarRail,
 } from '@/components/ui/sidebar'
-import { currentPageNumber, itemPerPage } from '@/config/CommonConstant'
-import { setOrgId, setOrgInfo } from '@/lib/orgSlice'
+import {
+  appFaviconPath,
+  appLogoAltText,
+  appLogoDarkPath,
+  appLogoPath,
+  currentPageNumber,
+  itemPerPage,
+} from '@/config/CommonConstant'
+import {
+  resetOrgState,
+  setOrgId,
+  setOrgInfo,
+  setSelectedOrgId,
+  setTenantData,
+} from '@/lib/orgSlice'
 import { useAppDispatch, useAppSelector } from '@/lib/hooks'
-import { usePathname, useRouter } from 'next/navigation'
+import { usePathname } from 'next/navigation'
 
-import { IconChevronRight } from '@tabler/icons-react'
+import {
+  IconBook,
+  IconChevronRight,
+  IconExternalLink,
+} from '@tabler/icons-react'
 import { Icons } from '../icons'
 import Image from 'next/image'
 import Link from 'next/link'
 import { NavItem } from '../../../types'
 import { Organization } from '@/features/dashboard/type/organization'
 import { getOrganizations } from '@/app/api/organization'
+import { hardNavigate } from '@/utils/navigation'
 import { navItems } from '@/constants/data'
 import { setSidebarCollapsed } from '@/lib/sidebarSlice'
-import { useTheme } from 'next-themes'
-
-const APP_ENV =
-  process.env.NEXT_PUBLIC_ACTIVE_THEME?.toLowerCase().trim() || 'credebl'
 
 const APP_CONFIG = {
-  logo(theme: string, resolvedTheme: string): string {
-    return resolvedTheme === 'dark'
-      ? `/logos/${theme}_logo_dark.svg`
-      : `/logos/${theme}_logo.svg`
-  },
-  collapsedLogo: (theme: string): string => `/favicons/favicon-${theme}.ico`,
-  poweredBy: (theme: string): { src: string; alt: string } | null => {
-    if (theme === 'credebl') {
-      return null
-    }
-    return { src: '/images/CREDEBL_Logo_Web.svg', alt: 'Powered by CREDEBL' }
-  },
+  logo: appLogoPath,
+  logoDark: appLogoDarkPath,
+  collapsedLogo: appFaviconPath,
 }
 
 export default function AppSidebar(): React.JSX.Element {
-  const router = useRouter()
   const pathname = usePathname()
 
-  const { resolvedTheme } = useTheme()
   const dispatch = useAppDispatch()
 
-  const logoImageSrc = APP_CONFIG.logo(APP_ENV, resolvedTheme || 'light')
-  const collapsedLogoImageSrc = APP_CONFIG.collapsedLogo(APP_ENV)
-  const poweredBy = APP_CONFIG.poweredBy(APP_ENV)
+  const { resolvedTheme } = useTheme()
+  const [mounted, setMounted] = useState(false)
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
+  const logoImageSrc =
+    mounted && resolvedTheme === 'dark' ? APP_CONFIG.logoDark : APP_CONFIG.logo
+  const collapsedLogoImageSrc = APP_CONFIG.collapsedLogo
 
   const [currentPage] = useState(currentPageNumber)
   const [pageSize] = useState(itemPerPage)
@@ -94,18 +106,35 @@ export default function AppSidebar(): React.JSX.Element {
         ) {
           const orgs = response.data.data.organizations
 
-          if (!selectedOrgId && orgs.length > 0) {
-            const [firstOrg]: Organization[] = orgs
+          if (orgs.length === 0) {
+            dispatch(resetOrgState())
+            return
+          }
 
-            dispatch(setOrgId(firstOrg?.id))
+          const selectedOrg = orgs.find(
+            (org: Organization) => org.id === selectedOrgId,
+          )
+          const [firstOrg]: Organization[] = orgs
+          const nextOrg = selectedOrg ?? firstOrg
+
+          if (!selectedOrgId || selectedOrgId !== nextOrg.id) {
+            dispatch(setOrgId(nextOrg.id))
+            dispatch(setSelectedOrgId(nextOrg.id))
+            dispatch(
+              setTenantData({
+                id: nextOrg.id,
+                name: nextOrg.name,
+                logoUrl: nextOrg.logoUrl,
+              }),
+            )
             dispatch(
               setOrgInfo({
-                id: firstOrg?.id,
-                name: firstOrg?.name,
-                description: firstOrg?.description,
-                logoUrl: firstOrg?.logoUrl,
+                id: nextOrg.id,
+                name: nextOrg.name,
+                description: nextOrg.description,
+                logoUrl: nextOrg.logoUrl,
                 roles:
-                  firstOrg?.userOrgRoles?.map(
+                  nextOrg.userOrgRoles?.map(
                     (role: { orgRole: { name: string } }) =>
                       role?.orgRole?.name,
                   ) || [],
@@ -146,7 +175,7 @@ export default function AppSidebar(): React.JSX.Element {
     <Sidebar collapsible="icon">
       <SidebarHeader className="group" data-collapsed>
         <button
-          onClick={() => router.push('/dashboard')}
+          onClick={() => hardNavigate('/dashboard')}
           className="focus-visible:ring-primary relative cursor-pointer rounded transition-all duration-300 focus:outline-none focus-visible:ring-2"
           aria-label="Go to dashboard"
         >
@@ -155,7 +184,7 @@ export default function AppSidebar(): React.JSX.Element {
               <Image
                 height={40}
                 width={150}
-                alt="Full Logo"
+                alt={appLogoAltText}
                 className="h-auto max-h-[100px] w-auto object-contain"
                 src={logoImageSrc}
               />
@@ -165,7 +194,7 @@ export default function AppSidebar(): React.JSX.Element {
               <Image
                 height={40}
                 width={40}
-                alt="Collapsed Logo"
+                alt={appLogoAltText}
                 className="h-full w-full object-contain"
                 src={collapsedLogoImageSrc}
               />
@@ -175,7 +204,7 @@ export default function AppSidebar(): React.JSX.Element {
       </SidebarHeader>
 
       <SidebarContent className="overflow-x-hidden">
-        <SidebarGroup>
+        <SidebarGroup className="flex-1">
           <SidebarMenu>
             {managedNavItem.map((item: NavItem): JSX.Element => {
               const Icon = item.icon ? Icons[item.icon] : Icons.logo
@@ -242,32 +271,28 @@ export default function AppSidebar(): React.JSX.Element {
             })}
           </SidebarMenu>
         </SidebarGroup>
+
+        {process.env.NEXT_PUBLIC_DOCS_URL && (
+          <SidebarGroup className="mt-auto border-t pt-2">
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild tooltip="Documentation">
+                  <a
+                    href={process.env.NEXT_PUBLIC_DOCS_URL}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    <IconBook className="shrink-0" />
+                    <span>Documentation</span>
+                    <IconExternalLink className="ml-auto h-3 w-3 shrink-0 opacity-40" />
+                  </a>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            </SidebarMenu>
+          </SidebarGroup>
+        )}
       </SidebarContent>
 
-      {poweredBy && (
-        <div className="text-muted-foreground flex items-center justify-center border-t p-3 text-sm group-data-[collapsed=true]:flex-col group-data-[collapsed=true]:gap-1">
-          {!isCollapsed ? (
-            <Image
-              src={'/favicons/favicon-credebl.ico'}
-              alt={poweredBy.alt}
-              width={30}
-              height={30}
-              className="h-5 w-auto object-contain"
-            />
-          ) : (
-            <>
-              <span className="mr-2">Powered by</span>
-              <Image
-                src={poweredBy.src}
-                alt={poweredBy.alt}
-                width={90}
-                height={30}
-                className="h-5 w-auto object-contain"
-              />
-            </>
-          )}
-        </div>
-      )}
       <SidebarRail />
     </Sidebar>
   )

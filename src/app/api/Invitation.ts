@@ -1,5 +1,11 @@
-import { axiosGet, axiosPost, ecosystemAxiosGet } from '@/services/apiRequests'
+import {
+  axiosGet,
+  axiosPost,
+  axiosPublicUserGet,
+  ecosystemAxiosGet,
+} from '@/services/apiRequests'
 
+import { ApiErrorResult } from '@/app/api/organization'
 import { AxiosResponse } from 'axios'
 import { apiRoutes } from '@/config/apiRoutes'
 import { getHeaderConfigs } from '@/config/GetHeaderConfigs'
@@ -32,7 +38,7 @@ export const getOrganizationInvitations = async (
 export const createInvitations = async (
   orgId: string,
   invitationList: object[],
-): Promise<AxiosResponse | string> => {
+): Promise<AxiosResponse | ApiErrorResult> => {
   const url = `${apiRoutes.organizations.root}/${orgId}${apiRoutes.organizations.invitations}`
   const payload = {
     invitations: invitationList,
@@ -50,8 +56,15 @@ export const createInvitations = async (
   try {
     return await axiosPost(axiosPayload)
   } catch (error) {
-    const err = error as Error
-    return err?.message
+    // Preserve the backend error code/status so callers can detect marketplace limits
+    // (e.g. marketplace_user_limit_reached) instead of matching message text.
+    const err = error as Error & { statusCode?: number; code?: string }
+    return {
+      error: true,
+      message: err?.message ?? 'Something went wrong, please try later...',
+      statusCode: err?.statusCode,
+      code: err?.code,
+    }
   }
 }
 
@@ -128,5 +141,23 @@ export const getUserEcosystemInvitations = async (
   } catch (error) {
     const err = error as Error
     return err?.message
+  }
+}
+
+// Verify that an org invitation exists, is pending, and matches the given email.
+// Used by the signup gate to authenticate an invitation bypass without requiring login.
+export const verifyInvitationPending = async (
+  invitationId: string,
+  email: string,
+): Promise<{ valid: boolean; error: boolean }> => {
+  const url = `${apiRoutes.organizations.root}${apiRoutes.organizations.verifyInvitationPending}?invitationId=${encodeURIComponent(invitationId)}&email=${encodeURIComponent(email)}`
+  const config = getHeaderConfigs()
+
+  try {
+    const response = await axiosPublicUserGet({ url, config })
+    const { data } = response as AxiosResponse
+    return { valid: Boolean(data?.data?.valid), error: false }
+  } catch {
+    return { valid: false, error: true }
   }
 }

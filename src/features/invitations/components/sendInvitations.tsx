@@ -2,6 +2,7 @@
 
 import * as Yup from 'yup'
 
+import { ApiErrorResult, getOrganizationRoles } from '@/app/api/organization'
 import {
   Dialog,
   DialogContent,
@@ -27,9 +28,10 @@ import { AxiosResponse } from 'axios'
 import { Button } from '@/components/ui/button'
 import { DeleteIcon } from '@/config/svgs/DeleteIcon'
 import { Input } from '@/components/ui/input'
+import { PlanLimitNotice } from '@/components/Marketplace/PlanLimitNotice'
 import { apiStatusCodes } from '@/config/CommonConstant'
 import { createInvitations } from '@/app/api/Invitation'
-import { getOrganizationRoles } from '@/app/api/organization'
+import { isMarketplaceLimitError } from '@/config/marketplaceErrors'
 import { useAppSelector } from '@/lib/hooks'
 
 interface Invitation {
@@ -61,6 +63,9 @@ export default function SendInvitationModal({
   const [invitations, setInvitations] = useState<Invitation[]>([])
   const [memberRole, setMemberRole] = useState<RoleI | null>(null)
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
+  // Set when an invite is rejected because the plan's user limit is reached, so we can
+  // offer an upgrade CTA instead of a dead-end error.
+  const [limitCode, setLimitCode] = useState<string | null>(null)
 
   const selectedOrgId = useAppSelector((state) => state.organization.orgId)
   const userProfileDetails = useAppSelector((state) => state.user.userInfo)
@@ -134,7 +139,13 @@ export default function SendInvitationModal({
           getAllSentInvitations()
         }
       } else {
-        setErrorMsg(resCreateOrg as string)
+        const errResult = resCreateOrg as ApiErrorResult
+        if (isMarketplaceLimitError(errResult?.code)) {
+          // Plan Studio-user limit reached — offer an upgrade CTA, not a raw error.
+          setLimitCode(errResult.code ?? null)
+        } else {
+          setErrorMsg(errResult?.message ?? 'Failed to send invitations')
+        }
       }
     } catch (error) {
       console.error('Failed to send invitations', error)
@@ -167,6 +178,13 @@ export default function SendInvitationModal({
         <DialogHeader>
           <DialogTitle>Send Invitation(s)</DialogTitle>
         </DialogHeader>
+
+        {limitCode && (
+          <PlanLimitNotice
+            code={limitCode}
+            onRefresh={() => setLimitCode(null)}
+          />
+        )}
 
         {errorMsg && (
           <AlertComponent

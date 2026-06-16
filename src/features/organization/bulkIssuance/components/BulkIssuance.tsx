@@ -158,7 +158,7 @@ const BulkIssuance = (): JSX.Element => {
       const attributes = JSON.parse(credentials.value)
       const data = {
         value: credentials.schemaVersion,
-        label: `${credentials.schemaName} [${credentials.schemaVersion}]`,
+        label: `${credentials.schemaName} [v${credentials.schemaVersion}]`,
         schemaName: credentials.schemaName,
         schemaVersion: credentials.schemaVersion,
         schemaIdentifier: credentials.schemaIdentifier,
@@ -319,14 +319,6 @@ const BulkIssuance = (): JSX.Element => {
   return (
     <PageContainer>
       <div className="px-4 pt-2">
-        <div className="col-span-full mb-4 xl:mb-2">
-          <div className="flex items-center justify-end">
-            <Button onClick={handleClick}>
-              <ArrowLeft />
-              Back
-            </Button>
-          </div>
-        </div>
         <div>
           <ToastContainer />
           <div className="mb-4 ml-1 flex items-center justify-between">
@@ -336,7 +328,11 @@ const BulkIssuance = (): JSX.Element => {
                 Upload a .CSV file for bulk issuance
               </span>
             </div>
-            <div className="flex flex-col space-y-2 sm:flex-row sm:items-center sm:space-y-0 sm:space-x-2">
+            <div className="flex items-center gap-2">
+              <Button variant="outline" size="sm" onClick={handleClick}>
+                <ArrowLeft className="h-4 w-4" />
+                Back
+              </Button>
               <Button
                 className="h-[2.2rem] min-w-[2rem]"
                 variant={'outline'}

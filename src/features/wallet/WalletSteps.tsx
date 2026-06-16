@@ -15,7 +15,7 @@ const getStepStatus = (step: number, currentStep: number): StepStatus => {
 const StepIcon = ({ status }: { status: StepStatus }): React.JSX.Element => {
   if (status === 'done') {
     return (
-      <span className="absolute -left-4 flex h-8 w-8 items-center justify-center rounded-full border border-green-500 bg-green-200 ring-6 ring-white dark:bg-green-900 dark:ring-gray-900">
+      <span className="dark:ring-background absolute -left-4 flex h-8 w-8 items-center justify-center rounded-full border border-green-500 bg-green-200 ring-6 ring-white dark:bg-green-900">
         <svg
           className="h-3.5 w-3.5 text-green-500 dark:text-green-400"
           aria-hidden="true"

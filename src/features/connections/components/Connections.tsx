@@ -1,4 +1,5 @@
 'use client'
+/* eslint-disable sort-imports */
 
 import {
   Connection,
@@ -13,25 +14,84 @@ import {
   TableStyling,
   getColumns,
 } from '../../../components/ui/generic-table-component/columns'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import { JSX, useEffect, useState } from 'react'
 
 import { Button } from '@/components/ui/button'
 import { DataTable } from '../../../components/ui/generic-table-component/data-table'
 import { DateCell } from '@/features/organization/connectionIssuance/components/CredentialTableCells'
+import CustomQRCode from '@/features/wallet/CustomQRCode'
+import Loader from '@/components/Loader'
+import { QrCode } from 'lucide-react'
 import PageContainer from '@/components/layout/page-container'
 import SidePanelComponent from '@/config/SidePanelCommon'
+import { createConnection } from '@/app/api/organization'
 import { dateConversion } from '@/utils/DateConversion'
 import { getConnectionsByOrg } from '@/app/api/connection'
 import { useAppSelector } from '@/lib/hooks'
+import type { AxiosResponse } from 'axios'
+import { apiStatusCodes } from '@/config/CommonConstant'
 
 export default function Connections(): JSX.Element {
   const metadata: ITableMetadata = {
     enableSelection: false,
   }
   const orgId = useAppSelector((state) => state.organization.orgId)
+  const orgInfo = useAppSelector((state) => state.organization.orgInfo)
 
   const [isLoading, setIsLoading] = useState(false)
   const [connectionData, setConnectionData] = useState<Connection[]>([])
+
+  // QR dialog state
+  const [openQrModal, setOpenQrModal] = useState(false)
+  const [qrInvitation, setQrInvitation] = useState<string | null>(null)
+  const [isQrLoading, setIsQrLoading] = useState(false)
+  const [qrError, setQrError] = useState<string | null>(null)
+  const [refreshTrigger, setRefreshTrigger] = useState(0)
+
+  const createQrConnection = async (): Promise<void> => {
+    if (!orgId) {
+      return
+    }
+    setIsQrLoading(true)
+    setQrError(null)
+    try {
+      const response = await createConnection(
+        orgId,
+        (orgInfo as { name?: string })?.name || '',
+      )
+
+      if (typeof response === 'string') {
+        setQrError(response || 'Failed to create connection')
+        return
+      }
+
+      const { data } = response as AxiosResponse
+      if (data?.statusCode === apiStatusCodes.API_STATUS_CREATED) {
+        setQrInvitation(data?.data?.connectionInvitation as string)
+        setRefreshTrigger((prev) => prev + 1)
+      } else {
+        setQrError(data?.message || 'Failed to create connection invitation')
+      }
+    } catch (error) {
+      console.error('Failed to create QR connection:', error)
+      setQrError('Failed to create connection. Please try again.')
+    } finally {
+      setIsQrLoading(false)
+    }
+  }
+
+  const handleOpenQrModal = (): void => {
+    setQrInvitation(null)
+    setQrError(null)
+    setOpenQrModal(true)
+    createQrConnection()
+  }
 
   const [paginationState, setPaginationState] = useState({
     pageIndex: 0,
@@ -113,6 +173,7 @@ export default function Connections(): JSX.Element {
     paginationState.sortBy,
     paginationState.sortOrder,
     paginationState.searchTerm,
+    refreshTrigger,
   ])
 
   useEffect(() => {
@@ -220,6 +281,13 @@ export default function Connections(): JSX.Element {
   const tableStyling: TableStyling = { metadata, columnData }
   const column = getColumns<Connection>(tableStyling)
 
+  const scanQrButton = (
+    <Button variant="outline" size="sm" onClick={handleOpenQrModal}>
+      <QrCode className="mr-2 h-4 w-4" />
+      Create Connection
+    </Button>
+  )
+
   return (
     <PageContainer>
       <div className="mb-2 flex flex-wrap items-center justify-between space-y-2 gap-x-4">
@@ -240,6 +308,7 @@ export default function Connections(): JSX.Element {
           pageIndex={paginationState.pageIndex}
           pageSize={paginationState.pageSize}
           pageCount={paginationState.pageCount}
+          toolbarActions={scanQrButton}
           onPageChange={(index) =>
             setPaginationState((prev) => ({ ...prev, pageIndex: index }))
           }
@@ -264,6 +333,40 @@ export default function Connections(): JSX.Element {
           fields={fields}
         />
       </div>
+
+      {/* Scan QR dialog */}
+      <Dialog open={openQrModal} onOpenChange={setOpenQrModal}>
+        <DialogContent
+          className="sm:max-w-sm"
+          onOpenAutoFocus={(e) => e.preventDefault()}
+        >
+          <DialogHeader>
+            <DialogTitle className="text-center">Scan QR</DialogTitle>
+          </DialogHeader>
+          <div className="flex min-h-48 items-center justify-center">
+            {isQrLoading ? (
+              <Loader />
+            ) : qrError ? (
+              <div className="flex flex-col items-center gap-3 text-center">
+                <p className="text-destructive text-sm">{qrError}</p>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={createQrConnection}
+                >
+                  Try again
+                </Button>
+              </div>
+            ) : qrInvitation ? (
+              <CustomQRCode value={qrInvitation} size={180} />
+            ) : (
+              <p className="text-muted-foreground text-sm">
+                Failed to generate QR code. Please try again.
+              </p>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </PageContainer>
   )
 }

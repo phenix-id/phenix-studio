@@ -4,7 +4,7 @@ import {
   IOrgAgent,
   IOrganisation,
 } from '@/features/organization/components/interfaces/organization'
-import React, { useEffect, useState } from 'react'
+import React, { useCallback, useEffect, useState } from 'react'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import {
   getUserEcosystemInvitations,
@@ -23,21 +23,19 @@ import PageContainer from '@/components/layout/page-container'
 import { apiStatusCodes } from '@/config/CommonConstant'
 import { getEcosystemEnableStausApi } from '@/app/api/ecosystem'
 import { getOrganizationById } from '@/app/api/organization'
+import { hardNavigate } from '@/utils/navigation'
 import { pathRoutes } from '@/config/pathRoutes'
 import { setEcosystemEnableStatus } from '@/lib/ecosystemSlice'
 import { setLedgerId } from '@/lib/orgSlice'
-import { useRouter } from 'next/navigation'
 
 const initialPageState = {
   pageNumber: 1,
   pageSize: 10,
-  total: 0,
 }
 
 export default function Dashboard(): React.JSX.Element {
   const [walletData, setWalletData] = useState<IOrgAgent[]>([])
   const [walletLoading, setWalletLoading] = useState(true)
-  const [currentPage, setCurrentPage] = useState(initialPageState)
   const [informativeMessage, setInformativeMessage] = useState<string | null>(
     '',
   )
@@ -51,20 +49,18 @@ export default function Dashboard(): React.JSX.Element {
   const orgId = useAppSelector((state) => state?.organization.orgId)
 
   const dispatch = useAppDispatch()
-  const router = useRouter()
   const firstName = useAppSelector((state) => state.profile.firstName)
 
-  const getAllInvitations = async (): Promise<void> => {
+  const getAllInvitations = useCallback(async (): Promise<void> => {
     try {
       const response = await getUserInvitations(
-        currentPage.pageNumber,
-        currentPage.pageSize,
+        initialPageState.pageNumber,
+        initialPageState.pageSize,
         '',
       )
       const { data } = response as AxiosResponse
 
       if (data?.statusCode === apiStatusCodes.API_STATUS_SUCCESS) {
-        const totalPages = data?.data?.totalPages
         const invitationList = data?.data?.invitations
         if (invitationList.length > 0) {
           setInformativeMessage(
@@ -72,18 +68,20 @@ export default function Dashboard(): React.JSX.Element {
           )
           setViewButton(true)
         }
-        setCurrentPage({ ...currentPage, total: totalPages })
       }
     } catch (err) {
       console.error('An unexpected error occurred', err)
     }
-  }
+  }, [])
 
-  const getAllEcosystemInvitations = async (): Promise<void> => {
+  const getAllEcosystemInvitations = useCallback(async (): Promise<void> => {
+    if (!orgId) {
+      return
+    }
     try {
       const response = await getUserEcosystemInvitations(
-        currentPage.pageNumber,
-        currentPage.pageSize,
+        initialPageState.pageNumber,
+        initialPageState.pageSize,
         '',
         orgId,
       )
@@ -98,16 +96,13 @@ export default function Dashboard(): React.JSX.Element {
           setEcoMessage('You have received invitation to join ecosystem ')
           setViewButton(true)
         }
-
-        const totalPages = data?.data?.totalPages
-        setCurrentPage({ ...currentPage, total: totalPages })
       }
     } catch (err) {
       console.error('An unexpected error occurred.', err)
     }
-  }
+  }, [orgId])
 
-  async function getEcosystemEnableStatus(): Promise<void> {
+  const getEcosystemEnableStatus = useCallback(async (): Promise<void> => {
     try {
       const response = await getEcosystemEnableStausApi()
       const { data } = response as AxiosResponse
@@ -115,15 +110,9 @@ export default function Dashboard(): React.JSX.Element {
     } catch (error) {
       console.error('failed to fetch ecosystem status', error)
     }
-  }
+  }, [dispatch])
 
-  useEffect(() => {
-    getAllInvitations()
-    getAllEcosystemInvitations()
-    getEcosystemEnableStatus()
-  }, [])
-
-  const fetchOrganizationDetails = async (): Promise<void> => {
+  const fetchOrganizationDetails = useCallback(async (): Promise<void> => {
     if (!orgId) {
       setHasOrganization(false)
       setWalletData([])
@@ -152,7 +141,17 @@ export default function Dashboard(): React.JSX.Element {
     } finally {
       setWalletLoading(false)
     }
-  }
+  }, [orgId, dispatch])
+
+  useEffect(() => {
+    void getEcosystemEnableStatus()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  useEffect(() => {
+    void getAllInvitations()
+    void getAllEcosystemInvitations()
+  }, [getAllInvitations, getAllEcosystemInvitations])
 
   useEffect(() => {
     if (orgId) {
@@ -160,11 +159,16 @@ export default function Dashboard(): React.JSX.Element {
     } else {
       setWalletLoading(false)
     }
-  }, [orgId])
+  }, [orgId, fetchOrganizationDetails])
 
   const handleCreateWallet = (): void => {
+    if (!orgId) {
+      setIsWalletSetupLoading(false)
+      return
+    }
+
     setIsWalletSetupLoading(true)
-    router.push(`wallet-setup?orgId=${orgId}`)
+    hardNavigate(`/wallet-setup?orgId=${encodeURIComponent(orgId)}`)
   }
 
   const [currentWallet] = walletData || []
@@ -218,7 +222,7 @@ export default function Dashboard(): React.JSX.Element {
       <div className="relative mb-6 flex min-h-[150px] flex-col justify-center overflow-hidden rounded-md bg-[url('/images/bg-lightwallet.png')] bg-cover bg-center bg-no-repeat p-6 shadow-sm dark:bg-[url('/images/bg-darkwallet.png')] dark:bg-cover">
         <div className="flex flex-col items-start">
           <h3 className="text-xl font-semibold">Wallet Details</h3>
-          <p className="mt-2 text-sm text-gray-700">
+          <p className="mt-2 text-sm">
             DID is already created for your organization.
           </p>
         </div>
@@ -236,7 +240,9 @@ export default function Dashboard(): React.JSX.Element {
             </p>
           </div>
           <Button
-            onClick={() => router.push(`create-did?orgId=${orgId}`)}
+            onClick={() =>
+              hardNavigate(`/create-did?orgId=${encodeURIComponent(orgId)}`)
+            }
             className="min-w-[180px]"
           >
             Setup Your DID

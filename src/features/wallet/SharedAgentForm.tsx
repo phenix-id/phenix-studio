@@ -98,11 +98,14 @@ const SharedAgentForm = ({
       if (data?.statusCode === apiStatusCodes.API_STATUS_CREATED) {
         onSuccess?.(data)
       } else {
-        setError(data?.message || 'Failed to create shared wallet')
+        const errorMessage = Array.isArray(data?.message)
+          ? data.message.join(' ')
+          : data?.message
+        setError(errorMessage || 'Failed to create shared wallet')
       }
     } catch (err) {
       console.error('Failed to create shared wallet', err)
-      throw err
+      setError('Failed to create shared wallet')
     } finally {
       setLoading(false)
     }

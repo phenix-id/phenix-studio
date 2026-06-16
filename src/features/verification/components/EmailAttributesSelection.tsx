@@ -1,6 +1,7 @@
 /* eslint-disable max-lines */
 'use client'
 
+import { ArrowRight, QrCode } from 'lucide-react'
 import {
   CredDefData,
   IAttributesDetails,
@@ -18,9 +19,7 @@ import {
 } from '@/components/ui/select'
 import { apiStatusCodes, predicatesConditions } from '@/config/CommonConstant'
 import { useAppDispatch, useAppSelector } from '@/lib/hooks'
-
 import { AlertComponent } from '@/components/AlertComponent'
-import { ArrowRight } from 'lucide-react'
 import { AxiosResponse } from 'axios'
 import BackButton from '@/components/BackButton'
 import { Button } from '@/components/ui/button'
@@ -57,6 +56,8 @@ const EmailAttributesSelection = (): JSX.Element => {
   const verificationRouteType = useAppSelector(
     (state) => state.verification.routeType,
   )
+
+  const isQrProof = verificationRouteType === 'QR Code'
 
   const getSelectedCredDefData = useAppSelector(
     (state) => state.verification.CredDefData,
@@ -194,6 +195,12 @@ const EmailAttributesSelection = (): JSX.Element => {
         break
       case !w3cSchema && isConnectionProof:
         router.push(pathRoutes.organizations.verification.connections)
+        break
+      case w3cSchema && isQrProof:
+        router.push(pathRoutes.organizations.verification.w3cQrVerification)
+        break
+      case !w3cSchema && isQrProof:
+        router.push(pathRoutes.organizations.verification.qrVerification)
         break
       case w3cSchema && !isConnectionProof:
         router.push(pathRoutes.organizations.verification.w3cEmailVerification)
@@ -548,6 +555,11 @@ const EmailAttributesSelection = (): JSX.Element => {
           >
             {isSubmitting ? (
               <Loader size={20} />
+            ) : isQrProof ? (
+              <>
+                <QrCode className="h-4 w-4" />
+                Generate QR Code
+              </>
             ) : (
               <>
                 <ArrowRight />

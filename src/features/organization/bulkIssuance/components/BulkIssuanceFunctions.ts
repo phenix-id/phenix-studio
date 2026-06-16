@@ -316,7 +316,7 @@ export const getSchemaCredentials = async (
                 ? credentialDefinitionId
                 : schemaVersion,
             label: [
-              `${schemaName} [${schemaVersion}]`,
+              `${schemaName} [v${schemaVersion}]`,
               currentSchemaType === SchemaTypes.schema_INDY
                 ? `- (${credentialDefinition})`
                 : null,
@@ -377,7 +377,7 @@ export const getSchemaCredentials = async (
             }
             return {
               value: version,
-              label: `${name} [${version}]`,
+              label: `${name} [v${version}]`,
               schemaName: name,
               type,
               schemaVersion: version,

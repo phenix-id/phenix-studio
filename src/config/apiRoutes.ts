@@ -76,6 +76,7 @@ export const apiRoutes = {
     presentationVerification: '/proofs',
     proofRequestAttributesVerification: '/verified-proofs',
     verificationCredDef: '/verifiation/cred-defs',
+    getProofById: '/proofs',
   },
 
   organizations: {
@@ -86,6 +87,7 @@ export const apiRoutes = {
     getById: '/orgs',
     getOrgDashboard: '/orgs/dashboard',
     invitations: '/invitations',
+    verifyInvitationPending: '/invitations/verify-pending',
     orgRoles: '/orgs/roles',
     editUserROle: '/user-roles',
     didList: '/dids',
@@ -98,6 +100,16 @@ export const apiRoutes = {
     deleteConnections: '/connections',
     getAllPlatformOrgs: '/orgs/:orgId/get-all-platform-organisations',
   },
+  Marketplace: {
+    resolve: '/marketplace/subscriptions/resolve',
+    onboardingSession: '/marketplace/onboarding/sessions',
+    onboarding: '/marketplace/onboarding',
+    subscription: '/marketplace/subscriptions',
+    entitlements: '/marketplace/orgs',
+    usageSummary: '/marketplace/orgs',
+    meteringEvents: '/marketplace/orgs',
+    availablePlans: '/marketplace/subscriptions',
+  },
   connection: {
     create: '/connections',
   },
@@ -107,6 +119,7 @@ export const apiRoutes = {
     getAllConnections: '/connections',
     issueCredential: '/credentials/offer',
     issueOobEmailCredential: '/credentials/oob/email',
+    issueOobQrCredential: '/credentials/oob/offer',
     bulk: {
       credefList: '/credentials/bulk/template',
       uploadCsv: '/bulk/upload',
@@ -136,6 +149,7 @@ export const apiRoutes = {
     createPolygonKeys: '/agents/polygon/create-keys',
     setAgentConfig: '/agents/configure',
     deleteWallet: '/agents/wallet',
+    generateDidWeb: '/agents/dids/web/generate',
   },
 
   setting: {

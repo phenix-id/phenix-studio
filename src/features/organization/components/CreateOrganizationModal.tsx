@@ -1,4 +1,4 @@
-/* eslint-disable max-lines */
+/* eslint-disable max-lines, sort-imports */
 'use client'
 
 import * as yup from 'yup'
@@ -12,14 +12,22 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import {
+  ApiErrorResult,
   createOrganization,
   getOrganizationById,
+  getOrganizations,
   updateOrganization,
 } from '@/app/api/organization'
+import { getOrgEntitlements } from '@/app/api/marketplace'
 import { fetchCities, fetchCountries, fetchStates } from '../helper/geoHelpers'
-import { setOrgId, setTenantData } from '@/lib/orgSlice'
-import { useEffect, useState } from 'react'
-import { useRouter, useSearchParams } from 'next/navigation'
+import {
+  setOrgId,
+  setOrgInfo,
+  setSelectedOrgId,
+  setTenantData,
+} from '@/lib/orgSlice'
+import { useCallback, useEffect, useState } from 'react'
+import { useSearchParams } from 'next/navigation'
 
 import { AlertComponent } from '@/components/AlertComponent'
 import { AxiosResponse } from 'axios'
@@ -31,9 +39,13 @@ import { Label } from '@/components/ui/label'
 import Loader from '@/components/Loader'
 import LogoUploader from './LogoUploader'
 import PageContainer from '@/components/layout/page-container'
+import { PlanLimitNotice } from '@/components/Marketplace/PlanLimitNotice'
 import Stepper from '@/components/StepperComponent'
+import { SubscribeRequired } from '@/components/Marketplace/SubscribeRequired'
+import { isMarketplaceLimitError } from '@/config/marketplaceErrors'
 import { apiStatusCodes } from '@/config/CommonConstant'
-import { useAppDispatch } from '@/lib/hooks'
+import { hardNavigate } from '@/utils/navigation'
+import { useAppDispatch, useAppSelector } from '@/lib/hooks'
 
 type Countries = {
   id: number
@@ -71,6 +83,9 @@ export default function OrganizationOnboarding(): React.JSX.Element {
   const [orgData, setOrgData] = useState<IOrgFormValues | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
   const [failure, setFailure] = useState<string | null>(null)
+  // Set when org creation is rejected because the plan's organization limit is reached,
+  // so we can offer an upgrade CTA instead of a dead-end error.
+  const [limitCode, setLimitCode] = useState<string | null>(null)
   const [isEditMode, setIsEditMode] = useState<boolean>(false)
   const [loading, setLoading] = useState<boolean>(false)
   const [createLoading, setCreateLoading] = useState<boolean>(false)
@@ -79,11 +94,20 @@ export default function OrganizationOnboarding(): React.JSX.Element {
   const [isBackLoading, setIsBackLoading] = useState(false)
 
   const searchParams = useSearchParams()
-  const router = useRouter()
   const orgId = searchParams.get('orgId')
   const redirectTo = searchParams.get('redirectTo')
   const clientAlias = searchParams.get('clientAlias')
   const dispatch = useAppDispatch()
+  // Used for the pre-flight org-limit check (existing org's subscription limits).
+  const selectedOrgId = useAppSelector((state) => state.organization.orgId)
+
+  // subscriptionRequired is set only AFTER the backend rejects the request with
+  // marketplace_subscription_required (no subscription at all). Pre-emptively blocking
+  // here would also gate users who have an active subscription but have hit their org
+  // limit — they should see the upgrade CTA, not the sign-up page.
+  // The backend guard (MarketplaceSubscriptionRequiredGuard) is the actual enforcement.
+  const [subscriptionRequired, setSubscriptionRequired] =
+    useState<boolean>(false)
 
   const fetchOrganizationDetails = async (): Promise<void> => {
     setLoading(true)
@@ -119,6 +143,43 @@ export default function OrganizationOnboarding(): React.JSX.Element {
     }
   }
 
+  // Pre-flight org-limit check. Called on mount and again when the user clicks
+  // "I've upgraded — Refresh" so the CTA clears without a page reload if they
+  // have already upgraded their plan in Microsoft.
+  const checkOrgLimit = useCallback(async (): Promise<void> => {
+    if (!selectedOrgId) {
+      return
+    }
+
+    const [entitlementsRes, orgsRes] = await Promise.all([
+      getOrgEntitlements(selectedOrgId),
+      getOrganizations(1, 1),
+    ])
+
+    const entitlements =
+      typeof entitlementsRes !== 'string'
+        ? ((
+            entitlementsRes.data as {
+              data?: { limits?: { maxOrganizations?: number | null } }
+            }
+          ).data ?? null)
+        : null
+
+    const totalOrgCount =
+      typeof orgsRes !== 'string'
+        ? ((orgsRes.data as { data?: { totalCount?: number } }).data
+            ?.totalCount ?? 0)
+        : 0
+
+    const maxOrgs = entitlements?.limits?.maxOrganizations
+    if (maxOrgs !== null && maxOrgs !== undefined && totalOrgCount >= maxOrgs) {
+      setLimitCode('marketplace_org_limit_reached')
+    } else {
+      // Limit no longer applies (plan was upgraded) — clear any stale notice.
+      setLimitCode(null)
+    }
+  }, [selectedOrgId])
+
   useEffect(() => {
     const initializeData = async (): Promise<void> => {
       setInitializing(true)
@@ -130,6 +191,9 @@ export default function OrganizationOnboarding(): React.JSX.Element {
           setIsEditMode(true)
           await fetchOrganizationDetails()
         } else {
+          // Surface the upgrade CTA immediately if the limit is already hit,
+          // so the user never fills out the form only to get blocked on submit.
+          await checkOrgLimit()
           setDataLoaded(true)
         }
       } catch (e) {
@@ -140,7 +204,10 @@ export default function OrganizationOnboarding(): React.JSX.Element {
     }
 
     initializeData()
-  }, [orgId])
+    // checkOrgLimit is stable (useCallback on selectedOrgId); including it in deps
+    // so ESLint exhaustive-deps is satisfied without triggering spurious re-runs.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [orgId, checkOrgLimit])
 
   // These useEffects handle state/city loading when user changes selections
   useEffect(() => {
@@ -180,7 +247,7 @@ export default function OrganizationOnboarding(): React.JSX.Element {
       setSuccess(null)
       setFailure(null)
 
-      const orgData = {
+      const organizationPayload = {
         name: values.name,
         description: values.description,
         logo: logoPreview || values?.logoUrl || '',
@@ -192,7 +259,10 @@ export default function OrganizationOnboarding(): React.JSX.Element {
         isPublic,
       }
 
-      const resCreateOrg = await updateOrganization(orgData, orgId as string)
+      const resCreateOrg = await updateOrganization(
+        organizationPayload,
+        orgId as string,
+      )
 
       const { data } = resCreateOrg as AxiosResponse
 
@@ -200,18 +270,42 @@ export default function OrganizationOnboarding(): React.JSX.Element {
         setSuccess(data?.message as string)
 
         if (orgId) {
+          const updatedLogoUrl =
+            logoPreview || values.logoPreview || values.logoUrl || ''
+          const existingOrg = orgData as unknown as {
+            roles?: string[]
+            userOrgRoles?: { orgRole?: { name?: string } }[]
+          }
+          const roles =
+            existingOrg?.userOrgRoles
+              ?.map((role) => role.orgRole?.name)
+              .filter((role): role is string => Boolean(role)) ??
+            existingOrg?.roles ??
+            []
+
+          dispatch(setOrgId(orgId))
+          dispatch(setSelectedOrgId(orgId))
           dispatch(
             setTenantData({
               id: orgId,
               name: values.name,
-              logoUrl: values.logoPreview ?? orgData?.logo,
+              logoUrl: updatedLogoUrl,
+            }),
+          )
+          dispatch(
+            setOrgInfo({
+              id: orgId,
+              name: values.name,
+              description: values.description,
+              logoUrl: updatedLogoUrl,
+              roles,
             }),
           )
         }
         setTimeout(() => {
           setSuccess(null)
           setLoading(true)
-          router.push('/dashboard')
+          hardNavigate('/dashboard', true)
         }, 3000)
       } else {
         setFailure(resCreateOrg as string)
@@ -246,27 +340,60 @@ export default function OrganizationOnboarding(): React.JSX.Element {
       const { data } = resCreateOrg as AxiosResponse
 
       if (data?.statusCode === apiStatusCodes.API_STATUS_CREATED) {
-        const orgId = data?.data?.id || data?.data?._id
+        const createdOrg = data?.data ?? {}
+        const orgId = createdOrg?.id || createdOrg?._id
+        const orgName = createdOrg?.name || values.name
+        const orgLogoUrl = createdOrg?.logoUrl || logoPreview || ''
+        const orgRoles =
+          createdOrg?.userOrgRoles
+            ?.map((role: { orgRole?: { name?: string } }) => role.orgRole?.name)
+            .filter((role: string | undefined): role is string =>
+              Boolean(role),
+            ) ?? []
 
         dispatch(setOrgId(orgId))
+        dispatch(setSelectedOrgId(orgId))
         dispatch(
           setTenantData({
             id: orgId,
-            name: data.name,
-            logoUrl: data.logoUrl,
+            name: orgName,
+            logoUrl: orgLogoUrl,
           }),
         )
-        setSuccess(data.message as string)
+        dispatch(
+          setOrgInfo({
+            id: orgId,
+            name: orgName,
+            description: createdOrg?.description || values.description,
+            logoUrl: orgLogoUrl,
+            roles: orgRoles.length > 0 ? orgRoles : ['owner'],
+          }),
+        )
+        setSuccess((data?.message as string) || 'Organization created')
 
         setTimeout(() => {
           const redirectUrl =
             redirectTo && clientAlias
               ? `/wallet-setup?orgId=${orgId}&redirectTo=${encodeURIComponent(redirectTo)}&clientAlias=${clientAlias}`
               : `/wallet-setup?orgId=${orgId}`
-          router.push(redirectUrl)
-        }, 3000)
+          hardNavigate(redirectUrl, true)
+        }, 600)
       } else {
-        setFailure(resCreateOrg as string)
+        const errResult = resCreateOrg as ApiErrorResult
+        // Backend enforces the subscription requirement even if the build-time flag is
+        // out of sync. Detect it via the error code / HTTP 403 (not message text, which
+        // is brittle) and surface the subscribe screen rather than a raw error.
+        if (
+          errResult?.code === 'marketplace_subscription_required' ||
+          errResult?.statusCode === 403
+        ) {
+          setSubscriptionRequired(true)
+        } else if (isMarketplaceLimitError(errResult?.code)) {
+          // Plan organization limit reached — offer an upgrade CTA, not a raw error.
+          setLimitCode(errResult.code ?? null)
+        } else {
+          setFailure(errResult?.message ?? 'Failed to create organization.')
+        }
       }
     } catch (error) {
       console.error('Error creating organization:', error)
@@ -274,6 +401,24 @@ export default function OrganizationOnboarding(): React.JSX.Element {
     } finally {
       setCreateLoading(false)
     }
+  }
+
+  if (subscriptionRequired) {
+    return <SubscribeRequired />
+  }
+
+  // Org limit detected either on mount (pre-flight) or after a failed submit.
+  // Shown before the form so the user never has to fill it out only to get blocked.
+  if (limitCode) {
+    return (
+      <PageContainer>
+        <div className="flex min-h-screen items-start justify-center p-6">
+          <div className="w-full max-w-[640px]">
+            <PlanLimitNotice code={limitCode} onRefresh={checkOrgLimit} />
+          </div>
+        </div>
+      </PageContainer>
+    )
   }
 
   return (
@@ -593,7 +738,7 @@ export default function OrganizationOnboarding(): React.JSX.Element {
                       type="button"
                       onClick={() => {
                         setIsBackLoading(true)
-                        router.push('/dashboard')
+                        hardNavigate('/dashboard')
                       }}
                       disabled={isBackLoading}
                     >

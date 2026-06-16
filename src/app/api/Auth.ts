@@ -2,6 +2,8 @@ import {
   axiosDelete,
   axiosGet,
   axiosPost,
+  axiosPublicUserGet,
+  axiosPublicUserPost,
   axiosPut,
 } from '@/services/apiRequests'
 
@@ -12,6 +14,12 @@ import { getHeaderConfigs } from '@/config/GetHeaderConfigs'
 export interface IUserSignUpData {
   email: string
   clientAlias?: string
+  // Relative return path baked into the verification email link so it survives the
+  // round-trip (e.g. the marketplace landing with its ?token=).
+  redirectTo?: string
+  // Org invitation ID — threaded through the verification email so the gate bypass
+  // and post-signup redirect survive the email round-trip.
+  invitationId?: string
 }
 export interface IAddPasswordDetails {
   email: string
@@ -48,7 +56,7 @@ export const sendVerificationMail = async (
     config,
   }
   try {
-    const response = await axiosPost(details)
+    const response = await axiosPublicUserPost(details)
     return response
   } catch (error) {
     const err = error as Error
@@ -65,7 +73,7 @@ export const resetPassword = async (
     payload,
   }
   try {
-    const response = await axiosPost(details)
+    const response = await axiosPublicUserPost(details)
     return response
   } catch (error) {
     const err = error as Error
@@ -82,7 +90,7 @@ export const forgotPassword = async (payload: {
     payload,
   }
   try {
-    const response = await axiosPost(details)
+    const response = await axiosPublicUserPost(details)
     return response
   } catch (error) {
     const err = error as Error
@@ -101,7 +109,7 @@ export const loginUser = async (
     config,
   }
   try {
-    const response = await axiosPost(details)
+    const response = await axiosPublicUserPost(details)
     return response
   } catch (error) {
     const err = error as Error
@@ -177,7 +185,7 @@ export const verifyUserMail = async (
     config,
   }
   try {
-    const response = await axiosGet(details)
+    const response = await axiosPublicUserGet(details)
     return response
   } catch (error) {
     const err = error as Error
@@ -195,7 +203,7 @@ export const checkUserExist = async (
     config,
   }
   try {
-    const response = await axiosGet(details)
+    const response = await axiosPublicUserGet(details)
     return response
   } catch (error) {
     const err = error as Error
@@ -214,7 +222,7 @@ export const addPasswordDetails = async (
     config,
   }
   try {
-    const response = await axiosPost(details)
+    const response = await axiosPublicUserPost(details)
     return response
   } catch (error) {
     const err = error as Error

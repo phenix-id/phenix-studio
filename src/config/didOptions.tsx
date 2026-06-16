@@ -1,5 +1,10 @@
 const MODE = process.env.MODE || ''
 
+const polygonDidOptions = [
+  'did:polygon:testnet',
+  ...(MODE === 'PROD' ? ['did:polygon:mainnet'] : []),
+]
+
 export const didExamples: Record<string, string> = {
   'did:indy:bcovrin:testnet': 'did:indy:bcovrin:testnet:123abc456xyz',
   'did:indy:indicio:demonet': 'did:indy:indicio:demonet:abc123xyz789',
@@ -16,6 +21,7 @@ export const protocolOptions = [
     id: 'didcomm',
     title: 'DIDComm',
     desc: 'Use decentralized identifiers for peer-to-peer verifiable communication.',
+    disabled: false,
     icon: (
       <img
         src="/images/didcomm-logo.png"
@@ -24,49 +30,57 @@ export const protocolOptions = [
       />
     ),
   },
-  {
-    id: 'oid4vc',
-    title: 'OID4VC',
-    desc: 'Use OpenID Connect-based verifiable credential exchange.',
-    icon: (
-      <img
-        src="/images/oid4vc_logo.png"
-        alt="OID4VC Logo"
-        className="h-10 w-30"
-      />
-    ),
-  },
+  // OpenID4VP — hidden until ready for release
+  // {
+  //   id: 'oid4vp',
+  //   title: 'OpenID4VP',
+  //   desc: 'Use OpenID for Verifiable Presentations.',
+  //   disabled: true,
+  //   icon: (
+  //     <img
+  //       src="/images/oid4vc_logo.png"
+  //       alt="OpenID4VP Logo"
+  //       className="h-10 w-30"
+  //     />
+  //   ),
+  // },
 ]
 
 export const subOptionsMap = {
   didcomm: [
     {
-      id: 'anoncreds',
-      title: 'AnonCreds',
-      desc: 'Privacy-preserving credentials issued over DIDComm.',
-      tooltip:
-        'AnonCreds enables privacy-preserving credentials using ZK proofs.',
-    },
-    {
       id: 'w3c',
       title: 'W3C VCDM',
       desc: 'W3C Verifiable Credentials compatible with DIDComm transport.',
       tooltip: 'W3C VCDM defines interoperable verifiable credentials.',
+      disabled: false,
     },
+    // AnonCreds — hidden until ready for release
+    // {
+    //   id: 'anoncreds',
+    //   title: 'AnonCreds',
+    //   desc: 'Privacy-preserving credentials issued over DIDComm.',
+    //   tooltip:
+    //     'AnonCreds enables privacy-preserving credentials using ZK proofs.',
+    //   disabled: true,
+    // },
   ],
 
-  oid4vc: [
+  oid4vp: [
     {
       id: 'mdoc',
-      title: 'MDOC',
-      desc: 'Mobile Document (ISO/IEC 18013-5) via OID4VC.',
-      tooltip: 'MDOC follows ISO/IEC mobile identity standard.',
+      title: 'ISO mdoc',
+      desc: 'ISO/IEC 18013-5 mobile document format for OpenID4VP.',
+      tooltip: 'ISO mdoc follows the ISO/IEC 18013-5 mobile identity standard.',
+      disabled: true,
     },
     {
       id: 'sdjwt',
-      title: 'SD-JWT',
-      desc: 'Selective Disclosure JWT-based credentials for OID4VC.',
-      tooltip: 'SD-JWT supports selective disclosure with JWT format.',
+      title: 'SD-JWT VC',
+      desc: 'Selective Disclosure JWT Verifiable Credential format for OpenID4VP.',
+      tooltip:
+        'SD-JWT VC supports selective disclosure using a JWT-based credential format.',
+      disabled: true,
     },
   ],
 }
@@ -79,10 +93,7 @@ export const didOptionsMap: Record<string, string[]> = {
     'did:indy:indicio:testnet',
   ],
 
-  w3c: [
-    'did:polygon:testnet',
-    ...(MODE === 'PROD' ? ['did:polygon:mainnet'] : []),
-    'did:key',
-    'did:web',
-  ],
+  w3c: [...polygonDidOptions, 'did:key', 'did:web'],
+  mdoc: [...polygonDidOptions, 'did:key', 'did:web'],
+  sdjwt: [...polygonDidOptions, 'did:key', 'did:web'],
 }

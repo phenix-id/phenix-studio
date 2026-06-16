@@ -8,7 +8,13 @@ import Link from 'next/link'
 import UserInfoForm from './UserInfoForm'
 import { useSearchParams } from 'next/navigation'
 
-export default function SignUpUser(): React.JSX.Element {
+interface SignUpUserProps {
+  invitationVerified?: boolean
+}
+
+export default function SignUpUser({
+  invitationVerified,
+}: SignUpUserProps): React.JSX.Element {
   const [step, setStep] = useState(1)
   const [email, setEmail] = useState<string>('')
   const searchParam = useSearchParams()
@@ -21,16 +27,26 @@ export default function SignUpUser(): React.JSX.Element {
       ? `/sign-in?redirectTo=${encodeURIComponent(redirectTo)}&clientAlias=${clientAlias}`
       : '/sign-in'
 
+  // Returning from marketplace landing means the user has a purchase token —
+  // show the sign-up form. Otherwise SignUpViewPage already handled the gate.
+  const cameFromMarketplace = (redirectTo ?? '').includes(
+    '/marketplace/landing',
+  )
+  const marketplaceRequired =
+    process.env.NEXT_PUBLIC_MARKETPLACE_REQUIRED === 'true'
+
   return (
     <div className="flex flex-col items-center justify-center">
-      {/* Subscription Message */}
-      <div className="mb-4 w-full max-w-md rounded-md border border-yellow-300 bg-yellow-50 p-4 text-yellow-800">
-        <p className="mt-1 text-sm">
-          You are registering using <strong>Free plan</strong> with limited
-          usage.
-          <span className="ml-1">Upgrade to avoid any interruptions.</span>
-        </p>
-      </div>
+      {/* Subscription Message — only relevant when there is a free tier */}
+      {!marketplaceRequired && (
+        <div className="mb-4 w-full max-w-md rounded-md border border-yellow-300 bg-yellow-50 p-4 text-yellow-800 dark:border-yellow-700 dark:bg-yellow-950 dark:text-yellow-300">
+          <p className="mt-1 text-sm">
+            You are registering using <strong>Free plan</strong> with limited
+            usage.
+            <span className="ml-1">Upgrade to avoid any interruptions.</span>
+          </p>
+        </div>
+      )}
       <div className="bg-card border-border relative z-10 h-full w-[480px] max-w-md overflow-hidden rounded-xl border p-8 shadow-xl transition-transform duration-300">
         <h2 className="mb-2 text-center text-xl font-semibold">
           Create an account
@@ -60,6 +76,10 @@ export default function SignUpUser(): React.JSX.Element {
             email={userEmail ?? ''}
             setEmail={setEmail}
             goToNext={() => setStep(2)}
+            locked={
+              (cameFromMarketplace || Boolean(invitationVerified)) &&
+              Boolean(userEmail)
+            }
           />
         )}
 

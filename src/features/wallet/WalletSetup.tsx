@@ -1,19 +1,24 @@
 'use client'
+/* eslint-disable sort-imports */
 
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import React, { useState } from 'react'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useSearchParams } from 'next/navigation'
 
 import { AlertComponent } from '@/components/AlertComponent'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
-import DedicatedAgentForm from './DedicatedAgentForm'
-import { Label } from '@/components/ui/label'
 import { Loader } from 'lucide-react'
 import SharedAgentForm from './SharedAgentForm'
 import Stepper from '@/components/StepperComponent'
 import { apiStatusCodes } from '@/config/CommonConstant'
+import { hardNavigate } from '@/utils/navigation'
+import { useAppSelector } from '@/lib/hooks'
+
+const isValidUuid = (value: string): boolean =>
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+    value,
+  )
 
 export enum AgentType {
   SHARED = 'shared',
@@ -36,22 +41,18 @@ export interface WalletResponse {
 }
 
 const WalletSetup = (): React.JSX.Element => {
-  const [agentType, setAgentType] = useState<AgentType>(AgentType.SHARED)
   const [alert, setAlert] = useState<string | null>(null)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const totalSteps = 4
   const [sharedWalletResponse, setSharedWalletResponse] =
     useState<WalletResponse | null>()
-  const [dedicatedWalletResponse, setDedicatedWalletResponse] =
-    useState<WalletResponse | null>(null)
   const [activeButton, setActiveButton] = useState<'skip' | 'continue' | null>(
     null,
   )
-  const router = useRouter()
   const searchParams = useSearchParams()
-  const orgId = searchParams.get('orgId') ?? ''
+  const selectedOrgId = useAppSelector((state) => state.organization.orgId)
+  const orgId = (searchParams.get('orgId') || selectedOrgId || '').trim()
   const clientAlias = searchParams.get('clientAlias')
-  const isVerifierClient = clientAlias?.trim().toUpperCase() === 'VERIFIER'
   const redirectTo = searchParams.get('redirectTo')
 
   const handleSharedWalletCreated = (response?: WalletResponse): void => {
@@ -63,16 +64,13 @@ const WalletSetup = (): React.JSX.Element => {
     }
   }
 
-  const handleDedicatedWalletCreated = (response?: WalletResponse): void => {
-    setDedicatedWalletResponse(response ?? null)
-    if (response?.statusCode === apiStatusCodes.API_STATUS_CREATED) {
-      setIsDialogOpen(true)
-    } else {
-      setAlert(response?.message || 'Failed to create dedicated wallet')
-    }
-  }
-
   const handleContinue = (): void => {
+    if (!orgId || !isValidUuid(orgId)) {
+      setAlert('Please select an organization before continuing.')
+      hardNavigate('/organizations')
+      return
+    }
+
     const redirectUrl =
       redirectTo && clientAlias
         ? `/create-did?orgId=${orgId}&redirectTo=${encodeURIComponent(
@@ -80,24 +78,10 @@ const WalletSetup = (): React.JSX.Element => {
           )}&clientAlias=${clientAlias}`
         : `/create-did?orgId=${orgId}`
 
-    router.push(redirectUrl)
+    hardNavigate(redirectUrl)
   }
 
-  const isAnyWalletCreated = Boolean(
-    sharedWalletResponse || dedicatedWalletResponse,
-  )
-
-  const getLabelClasses = (): string => {
-    if (isVerifierClient) {
-      return 'cursor-not-allowed opacity-50'
-    }
-
-    if (agentType === AgentType.DEDICATED) {
-      return 'border-blue-500 bg-blue-50 shadow-md'
-    }
-    return 'border-gray-200 hover:border-blue-300'
-  }
-  const labelClasses = getLabelClasses()
+  const isAnyWalletCreated = Boolean(sharedWalletResponse)
 
   return (
     <div className="mx-auto mt-10 max-w-5xl">
@@ -131,86 +115,28 @@ const WalletSetup = (): React.JSX.Element => {
           </div>
           <Stepper currentStep={2} totalSteps={totalSteps} />
 
-          <RadioGroup
-            value={agentType}
-            onValueChange={(value) => {
-              if (!isAnyWalletCreated) {
-                setAgentType(value as AgentType)
-              }
-            }}
-            className="grid grid-cols-1 gap-6 md:grid-cols-2"
-          >
-            <Label
-              htmlFor="dedicated"
-              className={`cursor-pointer rounded-2xl border p-5 transition-all ${labelClasses}`}
-            >
-              <div className="flex items-start space-x-3">
-                <RadioGroupItem
-                  id="dedicated"
-                  className="border"
-                  value={AgentType.DEDICATED}
-                  disabled={isVerifierClient}
-                />
-
-                <div>
-                  <h3 className="mb-1 font-semibold text-gray-800">
-                    Dedicated Agent
-                  </h3>
-                  <p className="text-sm text-gray-600">
-                    Private agent instance exclusively for your organization
-                  </p>
-                  <ul className="mt-2 ml-5 list-disc space-y-1 text-sm text-gray-600">
-                    <li>Higher performance and reliability</li>
-                    <li>Enhanced privacy and security</li>
-                    <li>Full control over the agent infrastructure</li>
-                  </ul>
-                </div>
-              </div>
-            </Label>
-
-            <Label
-              htmlFor="shared"
-              className={`cursor-pointer rounded-2xl border p-5 transition-all ${
-                agentType === AgentType.SHARED
-                  ? 'border-blue-500 bg-blue-50 shadow-md'
-                  : 'border-gray-200 hover:border-blue-300'
-              }`}
-            >
-              <div className="flex items-start space-x-3">
-                <RadioGroupItem
-                  id="shared"
-                  className="border"
-                  value={AgentType.SHARED}
-                />
-                <div>
-                  <h3 className="mb-1 font-semibold text-gray-800">
-                    Shared Agent
-                  </h3>
-                  <p className="text-sm text-gray-600">
-                    Use our cloud-hosted shared agent infrastructure
-                  </p>
-                  <ul className="mt-2 ml-5 list-disc space-y-1 text-sm text-gray-600">
-                    <li>Cost-effective solution</li>
-                    <li>Managed infrastructure</li>
-                    <li>Quick setup with no maintenance</li>
-                  </ul>
-                </div>
-              </div>
-            </Label>
-          </RadioGroup>
+          <div className="border-primary bg-accent dark:bg-accent rounded-2xl border p-5 shadow-md">
+            <div>
+              <h3 className="text-foreground mb-1 font-semibold">
+                Shared Agent
+              </h3>
+              <p className="text-muted-foreground text-sm">
+                Use our cloud-hosted shared agent infrastructure
+              </p>
+              <ul className="text-muted-foreground mt-2 ml-5 list-disc space-y-1 text-sm">
+                <li>Cost-effective solution</li>
+                <li>Managed infrastructure</li>
+                <li>Quick setup with no maintenance</li>
+              </ul>
+            </div>
+          </div>
 
           <div className="mt-10">
-            {agentType === AgentType.DEDICATED ? (
-              <DedicatedAgentForm
-                orgId={orgId}
-                onSuccess={handleDedicatedWalletCreated}
-              />
-            ) : (
-              <SharedAgentForm
-                orgId={orgId}
-                onSuccess={handleSharedWalletCreated}
-              />
-            )}
+            <SharedAgentForm
+              orgId={orgId}
+              onSuccess={handleSharedWalletCreated}
+              disabled={!orgId || !isValidUuid(orgId)}
+            />
           </div>
         </div>
       </Card>
@@ -223,7 +149,7 @@ const WalletSetup = (): React.JSX.Element => {
           onEscapeKeyDown={(e) => e.preventDefault()}
         >
           <div className="flex justify-center">
-            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-green-100">
+            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-green-100 dark:bg-green-900">
               <svg
                 className="h-9 w-9 text-green-600"
                 fill="none"
@@ -240,11 +166,11 @@ const WalletSetup = (): React.JSX.Element => {
             </div>
           </div>
 
-          <h2 className="text-xl font-semibold text-gray-800">
+          <h2 className="text-foreground text-xl font-semibold">
             Wallet created successfully!
           </h2>
 
-          <p className="text-gray-600">
+          <p className="text-muted-foreground">
             {redirectTo || clientAlias
               ? 'Proceed to DID creation to continue your setup.'
               : 'Would you like to continue with DID creation or skip it for now?'}
@@ -256,7 +182,7 @@ const WalletSetup = (): React.JSX.Element => {
                 variant="outline"
                 onClick={() => {
                   setActiveButton('skip')
-                  router.push('/dashboard')
+                  hardNavigate('/dashboard')
                 }}
                 className="px-6"
                 disabled={activeButton !== null}
@@ -270,7 +196,7 @@ const WalletSetup = (): React.JSX.Element => {
                 setActiveButton('continue')
                 handleContinue()
               }}
-              className="bg-blue-600 px-6 text-white hover:bg-blue-700"
+              className="px-6"
               disabled={activeButton !== null}
             >
               {activeButton === 'continue' ? <Loader /> : 'Continue'}

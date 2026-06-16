@@ -158,6 +158,9 @@ export const authOptions: MyAuthOptions = {
             return {
               id: user.data.session_state || user.data.email,
               sessionId: user.data.sessionId,
+              accessToken: user.data.access_token,
+              refreshToken: user.data.refresh_token,
+              expiresAt: user.data.expires_at,
             }
           }
 
@@ -176,6 +179,9 @@ export const authOptions: MyAuthOptions = {
     async jwt({ token, user }: { token: JWT; user?: User }): Promise<JWT> {
       if (user) {
         token.sessionId = user.sessionId
+        token.accessToken = user.accessToken
+        token.refreshToken = user.refreshToken
+        token.expiresAt = user.expiresAt
       }
       return token
     },
@@ -188,28 +194,38 @@ export const authOptions: MyAuthOptions = {
       token: JWT
     }): Promise<Session> {
       session.sessionId = token.sessionId as string
+      session.accessToken = token.accessToken as string
+      session.refreshToken = token.refreshToken as string
+      session.expiresAt = token.expiresAt as number
       return session
     },
 
     async redirect({ url, baseUrl }) {
       try {
         const redirectUrl = new URL(url, baseUrl)
+        const baseUrlObj = new URL(baseUrl)
 
+        // Always allow same-origin redirects (e.g. callbackUrl: '/sign-in').
+        // This handles the case where NEXTAUTH_COOKIE_DOMAIN is not configured.
+        if (redirectUrl.origin === baseUrlObj.origin) {
+          return redirectUrl.toString()
+        }
+
+        // Allow cross-subdomain redirects within the configured cookie domain
+        // (needed for multi-subdomain SSO setups).
         const cookieDomain = process.env.NEXTAUTH_COOKIE_DOMAIN?.replace(
           /^\./,
           '',
         )
-        const isAllowed =
+        if (
           cookieDomain &&
           redirectUrl.hostname.endsWith(cookieDomain) &&
           ['http:', 'https:'].includes(redirectUrl.protocol)
-
-        if (isAllowed) {
+        ) {
           return redirectUrl.toString()
         }
       } catch (err) {
         console.error('Redirect error:', err)
-        return new URL(url, baseUrl).toString()
       }
 
       return baseUrl

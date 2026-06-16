@@ -3,7 +3,6 @@
 import {
   Tooltip,
   TooltipContent,
-  TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip'
 import React from 'react'
@@ -24,12 +23,10 @@ const DateTooltip = ({ date, children }: DateProps): React.ReactElement => {
   const formattedDate = format(updatedDate, 'MMM dd, yyyy, h:mm a')
 
   return (
-    <TooltipProvider>
-      <Tooltip>
-        <TooltipTrigger asChild>{children}</TooltipTrigger>
-        <TooltipContent side="top">{formattedDate}</TooltipContent>
-      </Tooltip>
-    </TooltipProvider>
+    <Tooltip>
+      <TooltipTrigger asChild>{children}</TooltipTrigger>
+      <TooltipContent side="top">{formattedDate}</TooltipContent>
+    </Tooltip>
   )
 }
 

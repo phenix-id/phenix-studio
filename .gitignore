@@ -2,8 +2,10 @@
 
 # dependencies
 /node_modules
+/.pnpm-store
 /.pnp
 .pnp.js
+package-lock.json
 
 # testing
 /coverage
@@ -36,3 +38,7 @@ yarn-error.log*
 next-env.d.ts
 
 .idea/
+
+# Claude Code
+CLAUDE.md
+.claude/

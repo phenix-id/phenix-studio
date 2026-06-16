@@ -2,31 +2,34 @@
 
 import { JSX, useEffect } from 'react'
 
-const APP_ENV = process.env.NEXT_PUBLIC_ACTIVE_THEME?.toLowerCase().trim()
+import { appFaviconPath } from '@/config/CommonConstant'
+
 const APP_TITLE = process.env.NEXT_PUBLIC_APP_TITLE?.trim()
 
 const DEFAULT_CONFIG = {
-  favicon: `/favicons/favicon-${APP_ENV || 'credebl'}.ico`,
-  title: APP_TITLE ? APP_TITLE : 'CREDEBL - Studio',
+  favicon: appFaviconPath,
+  title: APP_TITLE ? APP_TITLE : 'PHENIX ID',
 }
 
 export function FaviconUpdater(): JSX.Element | null {
   useEffect(() => {
+    // Track the link element we create so we never touch React-owned head nodes.
+    // In React 19, <link>/<title> in <head> are HostSingleton fibers. Removing
+    // them outside React (e.g. with .remove()) nullifies their parentNode, which
+    // causes "Cannot read properties of null (reading 'removeChild')" on the
+    // next soft navigation when React tries to reconcile those fibers.
+    let managedLink: HTMLLinkElement | null = null
+
     const updateFaviconAndTitle = (): void => {
-      // Pick config from map or fallback
       const { favicon, title } = DEFAULT_CONFIG
 
-      document
-        .querySelectorAll("link[rel~='icon']")
-        .forEach((el) => el.remove())
-
-      // Add new favicon
-      const link = document.createElement('link')
-      link.rel = 'icon'
-      link.type = 'image/x-icon'
-      link.href = favicon
-      document.head.appendChild(link)
-
+      if (!managedLink) {
+        managedLink = document.createElement('link')
+        managedLink.rel = 'icon'
+        managedLink.type = 'image/png'
+        document.head.appendChild(managedLink)
+      }
+      managedLink.href = favicon
       document.title = title
     }
 
@@ -40,6 +43,7 @@ export function FaviconUpdater(): JSX.Element | null {
 
     return () => {
       window.removeEventListener('themeChanged', handleThemeChange)
+      managedLink?.remove()
     }
   }, [])
 

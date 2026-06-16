@@ -5,6 +5,7 @@ import { SessionProvider, SessionProviderProps } from 'next-auth/react'
 import { ActiveThemeProvider } from '../active-theme'
 import React from 'react'
 import ThemeProvider from './ThemeToggle/theme-provider'
+import { TooltipProvider } from '@/components/ui/tooltip'
 
 export default function Providers({
   session,
@@ -18,14 +19,19 @@ export default function Providers({
   return (
     <ThemeProvider
       attribute="class"
-      defaultTheme="system"
-      enableSystem
+      defaultTheme="light"
+      enableSystem={false}
       disableTransitionOnChange
       enableColorScheme
     >
       <ActiveThemeProvider initialTheme={activeThemeValue}>
-        <SessionProvider session={session} key={session?.user.id}>
-          {children}
+        <SessionProvider
+          session={session}
+          refetchOnWindowFocus={false}
+          refetchInterval={0}
+          key={session?.user.id}
+        >
+          <TooltipProvider delayDuration={0}>{children}</TooltipProvider>
         </SessionProvider>
       </ActiveThemeProvider>
     </ThemeProvider>

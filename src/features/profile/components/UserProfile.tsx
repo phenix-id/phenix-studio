@@ -11,7 +11,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { setFirstName, setProfileId } from '@/lib/profileSlice'
 import { useAppDispatch, useAppSelector } from '@/lib/hooks'
 
-import AddPasskey from '@/features/passkey/AddPasskey'
+// Passkey feature — hidden until ready for release
+// import AddPasskey from '@/features/passkey/AddPasskey'
 import DisplayUserProfile from './DisplayUserProfile'
 import EditUserProfile from './EditUserProfile'
 import { IUserProfile } from '@/components/profile/interfaces'
@@ -24,6 +25,8 @@ export default function UserProfile(): React.JSX.Element {
   const token = useAppSelector((state) => state.auth.token)
 
   const [isEditProfileOpen, setIsEditProfileOpen] = useState(false)
+  // userEmail is consumed by AddPasskey (hidden until ready for release)
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [userEmail, setUserEmail] = useState('')
   const [prePopulatedUserProfile, setPrePopulatedUserProfile] =
     useState<IUserProfile | null>(null)
@@ -110,7 +113,9 @@ export default function UserProfile(): React.JSX.Element {
       >
         <TabsList>
           <TabsTrigger value="profile">Profile</TabsTrigger>
+          {/* Passkey tab — hidden until ready for release
           <TabsTrigger value="passkey">Passkey</TabsTrigger>
+          */}
           <TabsTrigger value="sessions">Sessions</TabsTrigger>
         </TabsList>
 
@@ -139,9 +144,11 @@ export default function UserProfile(): React.JSX.Element {
           </>
         </TabsContent>
 
+        {/* Passkey tab content — hidden until ready for release
         <TabsContent value="passkey" className="mt-8">
           <AddPasskey email={userEmail} />
         </TabsContent>
+        */}
 
         <TabsContent value="sessions" className="mt-8">
           <Sessions />

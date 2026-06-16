@@ -1,27 +1,30 @@
 'use client'
 
+import { type ApiErrorResponse, createSchemas } from '@/app/api/schema'
 import { DidMethod, SchemaType, SchemaTypeValue } from '@/common/enums'
 import { FieldName, IAttributes, IFormData } from '../type/schemas-interface'
 import { type FormikErrors, type FormikProps } from 'formik'
-import React, { useEffect, useMemo, useState } from 'react'
-
+import React, { useCallback, useEffect, useId, useMemo, useState } from 'react'
 import {
+  W3C_SCHEMA_DEFAULT_VERSION,
   apiStatusCodes,
   optionsSchemaCreation as options,
 } from '../../../config/CommonConstant'
-
+import { AlertComponent } from '@/components/AlertComponent'
 import type { AxiosResponse } from 'axios'
 import { Card } from '@/components/ui/card'
 import FormikData from './FormikData'
-import { createSchemas } from '@/app/api/schema'
 import { getOrganizationById } from '@/app/api/organization'
+import { hardNavigate } from '@/utils/navigation'
 import { useAppSelector } from '@/lib/hooks'
-import { useRouter } from 'next/navigation'
 
 export interface IPopup {
   show: boolean
   type: 'reset' | 'create'
 }
+
+const W3C_SCHEMA_CONFLICT_MESSAGE =
+  'A schema with this name and version already exists. Use a different version to create a new iteration.'
 
 const CreateSchema = (): React.JSX.Element => {
   const [failure, setFailure] = useState<string | null>(null)
@@ -35,14 +38,14 @@ const CreateSchema = (): React.JSX.Element => {
   const [schemaTypeValues, setSchemaTypeValues] = useState<SchemaTypeValue>()
   const [type, setType] = useState<SchemaType>()
   const orgId = useAppSelector((state) => state.organization.orgId)
-
-  const route = useRouter()
+  const initialAttributeId = useId()
 
   const initFormData: IFormData = {
     schemaName: '',
     schemaVersion: '',
     attribute: [
       {
+        id: initialAttributeId,
         attributeName: '',
         schemaDataType: 'string',
         displayName: '',
@@ -50,7 +53,11 @@ const CreateSchema = (): React.JSX.Element => {
       },
     ],
   }
-  const fetchOrganizationDetails = async (): Promise<void> => {
+  const fetchOrganizationDetails = useCallback(async (): Promise<void> => {
+    if (!orgId) {
+      return
+    }
+
     setLoading(true)
     const response = await getOrganizationById(orgId as string)
     const { data } = response as AxiosResponse
@@ -74,13 +81,25 @@ const CreateSchema = (): React.JSX.Element => {
     }
 
     setLoading(false)
-  }
+  }, [orgId])
 
   const [formData, setFormData] = useState(initFormData)
 
   useEffect(() => {
     fetchOrganizationDetails()
-  }, [])
+  }, [fetchOrganizationDetails])
+
+  useEffect(() => {
+    if (type !== SchemaType.W3C) {
+      return
+    }
+
+    setFormData((previousFormData) => ({
+      ...previousFormData,
+      schemaVersion:
+        previousFormData.schemaVersion?.trim() || W3C_SCHEMA_DEFAULT_VERSION,
+    }))
+  }, [type])
 
   const filledInputs = (formData: IFormData): boolean => {
     const { schemaName, schemaVersion, attribute } = formData
@@ -106,6 +125,24 @@ const CreateSchema = (): React.JSX.Element => {
     return true
   }
 
+  const getCreateSchemaFailureMessage = (
+    createSchema: AxiosResponse | ApiErrorResponse,
+  ): string => {
+    if (
+      type === SchemaType.W3C &&
+      'statusCode' in createSchema &&
+      createSchema.statusCode === apiStatusCodes.API_STATUS_CONFLICT
+    ) {
+      return W3C_SCHEMA_CONFLICT_MESSAGE
+    }
+
+    if ('message' in createSchema) {
+      return createSchema.message
+    }
+
+    return 'Failed to create schema.'
+  }
+
   const submit = async (values: IFormData): Promise<void> => {
     setCreateLoader(true)
     if (!type) {
@@ -114,13 +151,17 @@ const CreateSchema = (): React.JSX.Element => {
       return
     }
 
+    const schemaVersion = values.schemaVersion?.trim()
     const schemaFieldName: FieldName = {
       type,
       schemaPayload: {
         schemaName: values.schemaName,
-        ...(type === SchemaType.W3C && { schemaType: schemaTypeValues }),
+        ...(type === SchemaType.W3C && {
+          schemaType: schemaTypeValues,
+          ...(schemaVersion && { schemaVersion }),
+        }),
         ...(type === SchemaType.INDY && {
-          schemaVersion: values.schemaVersion,
+          schemaVersion,
         }),
         attributes: values.attribute,
         description: values.schemaName,
@@ -138,19 +179,26 @@ const CreateSchema = (): React.JSX.Element => {
       setSuccess(data?.message)
       setCreateLoader(false)
       setLoading(true)
+      // Close the dialog shortly after showing the success state,
+      // then navigate away once the message has been seen.
+      setTimeout(() => {
+        setShowPopup({ type: 'create', show: false })
+      }, 1000)
       setTimeout(() => {
         setSuccess(null)
-        route.push('/schemas')
+        hardNavigate('/schemas')
       }, 1500)
     } else {
-      setFailure(createSchema as string)
-      setCreateLoader(false)
-      setTimeout(() => setFailure(null), 2000)
-    }
-
-    setTimeout(() => {
+      // Close the confirmation dialog immediately — it was asking "do you want
+      // to proceed?" and the answer is "you can't". Keeping the error inside
+      // the dialog is confusing and the 2-second auto-dismiss meant the user
+      // often missed it entirely.
+      // Show the error on the page itself so the user can read it at their
+      // own pace and take action (e.g. upgrading their plan).
       setShowPopup({ type: 'create', show: false })
-    }, 2000)
+      setFailure(getCreateSchemaFailureMessage(createSchema))
+      setCreateLoader(false)
+    }
   }
 
   const confirmCreateSchema = (): void => {
@@ -228,6 +276,19 @@ const CreateSchema = (): React.JSX.Element => {
       <h1 className="text-foreground ml-10 text-xl font-semibold">
         Create Schema
       </h1>
+
+      {/* Page-level error — shown after the confirmation dialog closes on failure.
+          No auto-dismiss: the user reads it and closes it manually. */}
+      {failure && (
+        <div className="mx-6 mt-4">
+          <AlertComponent
+            message={failure}
+            type="failure"
+            onAlertClose={() => setFailure(null)}
+          />
+        </div>
+      )}
+
       <Card className="m-0 px-4 py-8 md:m-6" id="createSchemaCard">
         <div>
           <FormikData

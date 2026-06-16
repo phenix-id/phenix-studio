@@ -14,7 +14,6 @@ import { useRouter, useSearchParams } from 'next/navigation'
 
 import { AxiosResponse } from 'axios'
 import { Button } from '@/components/ui/button'
-import { Card } from '@/components/ui/card'
 import DynamicApplicationLogo from '@/features/components/DynamicLogo'
 import Footer from '@/components/Footer'
 import { Input } from '@/components/ui/input'
@@ -81,7 +80,7 @@ const ResetPassword = (): JSX.Element => {
   }
 
   return (
-    <div className="relative flex min-h-screen flex-col bg-[image:var(--card-gradient)]">
+    <div className="relative flex h-screen flex-col overflow-y-auto bg-[image:var(--card-gradient)]">
       <ToastContainer position="top-center" />
       <div className="absolute top-4 left-4 z-20">
         <DynamicApplicationLogo />
@@ -102,7 +101,7 @@ const ResetPassword = (): JSX.Element => {
               </div>
               <div className="flex grow-1 p-10">
                 <div className="flex w-full justify-center">
-                  <Card className="relative z-10 w-full max-w-lg overflow-hidden rounded-xl border p-8 shadow-xl transition-transform duration-300 lg:max-w-md">
+                  <div className="bg-card border-border relative z-10 w-full max-w-lg overflow-hidden rounded-xl border p-8 shadow-xl transition-transform duration-300 lg:max-w-md">
                     <div className="flex w-full flex-col gap-4 lg:mt-8">
                       <div className="font-inter flex justify-center text-center text-3xl leading-10 font-bold">
                         Reset Password
@@ -266,7 +265,7 @@ const ResetPassword = (): JSX.Element => {
                         </Form>
                       )}
                     </Formik>
-                  </Card>
+                  </div>
                 </div>
               </div>
             </div>

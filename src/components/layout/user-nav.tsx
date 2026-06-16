@@ -9,29 +9,25 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuShortcut,
-  DropdownMenuSub,
-  DropdownMenuSubContent,
-  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import React, { useEffect, useState } from 'react'
 
 import { Button } from '@/components/ui/button'
 import { IUserProfile } from '../profile/interfaces'
-import { ThemeSelector } from '../theme-selector'
 import { apiRoutes } from '@/config/apiRoutes'
 import { apiStatusCodes } from '@/config/CommonConstant'
-import { generateAccessToken } from '@/utils/session'
 import { getUserProfile } from '@/app/api/Auth'
+import { hardNavigate } from '@/utils/navigation'
+import { pathRoutes } from '@/config/pathRoutes'
+import { persistor } from '@/lib/store'
 import { setUserProfileDetails } from '@/lib/userSlice'
 import { signOut } from 'next-auth/react'
 import { useAppSelector } from '@/lib/hooks'
 import { useDispatch } from 'react-redux'
-import { useRouter } from 'next/navigation'
 
 export function UserNav(): React.JSX.Element | null {
   const dispatch = useDispatch()
-  const router = useRouter()
 
   const [userProfile, setUserProfile] = useState<IUserProfile | null>(null)
   const token = useAppSelector((state) => state.auth.token)
@@ -58,51 +54,42 @@ export function UserNav(): React.JSX.Element | null {
     }
 
     fetchProfile()
-  }, [token])
+  }, [token, dispatch])
 
   if (!token) {
     return null
   }
 
-  const logoutUser = async (): Promise<void> => {
-    const rootKey = 'persist:root'
-    const payload = {
-      sessions: [sessionId],
-    }
+  const handleLogout = async (): Promise<void> => {
+    // Wipe persisted Redux state synchronously before anything async runs.
+    localStorage.removeItem('persist:root')
 
-    const response = await fetch(
-      `${process.env.NEXT_PUBLIC_BASE_URL}${apiRoutes.auth.signOut}`,
-      {
+    // Run all three cleanup operations in parallel — they are fully independent.
+    // Each failure is caught individually so one failure never blocks the others
+    // or prevents navigation.
+    const ignoreError = (): void => undefined
+
+    await Promise.all([
+      // Best-effort backend session invalidation.
+      fetch(`${process.env.NEXT_PUBLIC_BASE_URL}${apiRoutes.auth.signOut}`, {
         method: 'POST',
-        body: JSON.stringify(payload),
+        body: JSON.stringify({ sessions: [sessionId] }),
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
         },
-      },
-    )
+      }).catch(ignoreError),
 
-    if (response.status === apiStatusCodes.API_STATUS_UNAUTHORIZED) {
-      console.error('Logout API failed ')
-      await generateAccessToken()
-    } else {
-      if (localStorage.getItem(rootKey)) {
-        localStorage.removeItem(rootKey)
+      // Flush redux-persist's write queue.
+      persistor.purge().catch(ignoreError),
 
-        const interval = setInterval(() => {
-          if (!localStorage.getItem(rootKey)) {
-            clearInterval(interval)
-            signOut({ callbackUrl: '/sign-in' })
-          }
-        }, 100)
-      } else {
-        signOut({ callbackUrl: '/sign-in' })
-      }
-    }
-  }
+      // Clear the NextAuth session cookie server-side.
+      signOut({ redirect: false }).catch(ignoreError),
+    ])
 
-  const handleLogout = async (): Promise<void> => {
-    logoutUser()
+    // Hard navigate — bypasses SPA routing so no React component re-renders
+    // between now and the sign-in page appearing.
+    window.location.href = '/sign-in'
   }
 
   return (
@@ -138,27 +125,24 @@ export function UserNav(): React.JSX.Element | null {
         <DropdownMenuSeparator />
 
         <DropdownMenuGroup>
-          <DropdownMenuItem onClick={() => router.push('/profile')}>
+          <DropdownMenuItem onClick={() => hardNavigate('/profile')}>
             Profile
           </DropdownMenuItem>
 
-          <DropdownMenuItem onClick={() => router.push('/developers-setting')}>
+          {/* Developer Settings — hidden until ready for release
+          <DropdownMenuItem onClick={() => hardNavigate('/developers-setting')}>
             Developer Settings
           </DropdownMenuItem>
+          */}
 
           {process.env.NEXT_PUBLIC_ENABLE_BILLING_OPTION?.toLowerCase() ===
             'true' && (
-            <DropdownMenuItem onClick={() => router.push('/billing ')}>
+            <DropdownMenuItem
+              onClick={() => hardNavigate(pathRoutes.organizations.billing)}
+            >
               Billing
             </DropdownMenuItem>
           )}
-
-          <DropdownMenuSub>
-            <DropdownMenuSubTrigger>Theme</DropdownMenuSubTrigger>
-            <DropdownMenuSubContent className="border">
-              <ThemeSelector />
-            </DropdownMenuSubContent>
-          </DropdownMenuSub>
         </DropdownMenuGroup>
 
         <DropdownMenuSeparator />

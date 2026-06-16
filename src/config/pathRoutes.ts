@@ -21,8 +21,15 @@ export const pathRoutes = {
     root: '/ecosystems',
     ecosystemLogin: '/authentication/sign-in',
   },
+  marketplace: {
+    landing: '/marketplace/landing',
+    onboarding: '/marketplace/onboarding',
+    success: '/marketplace/onboarding/success',
+    error: '/marketplace/onboarding/error',
+  },
   organizations: {
     root: '/organizations',
+    billing: '/organizations/billing',
     invitations: '/invitations',
     users: '/users',
     schemas: '/schemas',
@@ -45,6 +52,7 @@ export const pathRoutes = {
       bulkIssuance: '/credentials/issue/bulk-issuance',
       email: '/credentials/issue/email',
       emailHistory: '/credentials/issue/email/history',
+      connectionOob: '/credentials/issue/connection-oob',
     },
     verification: {
       requestProof: '/verification/verify-credentials',
@@ -59,6 +67,10 @@ export const pathRoutes = {
       w3cEmailVerification:
         '/verification/verify-credentials/schema/attributes/verification-email',
       emailCredDef: '/verification/verify-credentials/schema/cred-defs',
+      qrVerification:
+        '/verification/verify-credentials/schema/cred-defs/attributes/verification-qr',
+      w3cQrVerification:
+        '/verification/verify-credentials/schema/attributes/verification-qr',
       connections:
         '/verification/verify-credentials/schemas/cred-defs/connections',
       W3CConnections: '/verification/verify-credentials/schemas/connections',
@@ -94,6 +106,7 @@ export const pathRoutes = {
       schemas: '/credentials/issue/schemas',
       connections: '/credentials/connections',
       issue: '/credentials/issue',
+      connectionOob: '/credentials/issue',
     },
     credentials: {
       credentials: '/credentials',

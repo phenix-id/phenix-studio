@@ -287,7 +287,7 @@ const IssueCred = (): React.JSX.Element => {
               (value: ICredentials, index: number) => ({
                 schemaVersion: value.schemaVersion,
                 value: value.schemaAttributes,
-                label: value.schemaCredDefName,
+                label: `${value.schemaName} [v${value.schemaVersion}]`,
                 id: index,
                 schemaId: response
                   ? value.schemaIdentifier

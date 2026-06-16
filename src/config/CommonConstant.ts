@@ -9,6 +9,7 @@ export const IMG_MAX_HEIGHT = 291
 export const emailRegex = /(\.[a-zA-Z]{2,})$/
 export const CREDENTIAL_CONTEXT_VALUE = 'https://www.w3.org/2018/credentials/v1'
 export const schemaVersionRegex = /^\d{1,5}(?:\.\d{1,5})?(?:\.\d{1,5})?$/
+export const W3C_SCHEMA_DEFAULT_VERSION = '1.0'
 export const proofPurpose = 'assertionMethod'
 export const limitedAttributesLength = 3
 export const itemPerPage = 10
@@ -43,6 +44,7 @@ export const apiStatusCodes = {
   API_STATUS_PARTIALLY_COMPLETED: 206,
   API_STATUS_BAD_REQUEST: 400,
   API_STATUS_UNAUTHORIZED: 401,
+  API_STATUS_CONFLICT: 409,
   API_STATUS_NOT_FOUND: 404,
   API_STATUS_SERVER_ERROR: 500,
 }
@@ -132,12 +134,19 @@ export const sessionExcludedPaths = [
 ]
 
 const imageBasePath = '/images'
+const logoBasePath = '/logos'
 
-export const CredeblLogo = `${imageBasePath}/CREDEBL_Logo_Web.svg`
+export const appLogoPath = `${logoBasePath}/Phenix_Logo.png`
+export const appLogoDarkPath = `${logoBasePath}/Phenix_Logo_White.png`
+export const appFaviconPath = `${logoBasePath}/favicon.png`
+export const appLogoAltText = 'PHENIX ID Logo'
+export const appLogoWidth = 781
+export const appLogoHeight = 204
+export const CredeblLogo = appLogoPath
 export const signInImg = `${imageBasePath}/signin.svg`
 export const closeIconImg = `${imageBasePath}/close_icon.svg`
-export const CredeblLogoWidth = 170
-export const CredeblLogoHeight = 140
+export const CredeblLogoWidth = appLogoWidth
+export const CredeblLogoHeight = appLogoHeight
 
 export const signInWidth = 500
 export const signInHeight = 500
@@ -245,18 +254,21 @@ export const bulkIssuanceApiParameter = {
   allSearch: '',
 }
 
-export const defaultCredeblFooterText = 'CREDEBL, a Series of LF Projects, LLC'
+export const defaultFooterText = 'PHENIX ID. All rights reserved.'
+export const defaultCredeblFooterText = defaultFooterText
 
 export const InfoText = {
   DIDCommInfoText:
     'DIDComm provides secure messaging between agents and credential exchange.',
-  OID4VCInfoText:
-    'OID4VC is a suite of specifications that standardizes the issuance and presentation of digital credentials using OAuth 2.0 and OpenID Connect protocols',
+  OpenID4VPInfoText:
+    'OpenID for Verifiable Presentations is the OpenID Foundation standard for requesting and presenting credentials.',
   AnonCredsInfoText:
     'AnonCreds enables privacy-preserving credentials using zero-knowledge proofs.',
   W3CInfoText: 'W3C VCDM defines interoperable Verifiable Credentials.',
-  MDOCInfoText: 'MDOC follows ISO/IEC mobile identity standard.',
-  SDJWTInfoText: 'SD-JWT supports selective disclosure JWT credentials.',
+  MDOCInfoText:
+    'ISO mdoc follows the ISO/IEC 18013-5 mobile identity standard.',
+  SDJWTInfoText:
+    'SD-JWT VC supports selective disclosure using a JWT-based credential format.',
 }
 
 export const confirmationCertificateMessages = {

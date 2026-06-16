@@ -1,9 +1,15 @@
+import { FeatureGateWrapper } from '@/components/Marketplace/FeatureGateWrapper'
 import React from 'react'
 import VerificationSchemasList from '@/features/verification/components/VerificationSchemasList'
 
 const page = (): React.JSX.Element => (
   <div>
-    <VerificationSchemasList />
+    <FeatureGateWrapper
+      feature="verification"
+      usageDimension="verification_txn"
+    >
+      <VerificationSchemasList />
+    </FeatureGateWrapper>
   </div>
 )
 
