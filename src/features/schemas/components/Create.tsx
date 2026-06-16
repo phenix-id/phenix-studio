@@ -11,12 +11,16 @@ import {
   optionsSchemaCreation as options,
 } from '../../../config/CommonConstant'
 import { AlertComponent } from '@/components/AlertComponent'
+import { AlertTriangle } from 'lucide-react'
 import type { AxiosResponse } from 'axios'
+import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import FormikData from './FormikData'
 import { getOrganizationById } from '@/app/api/organization'
 import { hardNavigate } from '@/utils/navigation'
 import { useAppSelector } from '@/lib/hooks'
+
+type SetupStatus = 'loading' | 'no-wallet' | 'no-did' | 'ready'
 
 export interface IPopup {
   show: boolean
@@ -37,6 +41,7 @@ const CreateSchema = (): React.JSX.Element => {
   const [loading, setLoading] = useState<boolean>(false)
   const [schemaTypeValues, setSchemaTypeValues] = useState<SchemaTypeValue>()
   const [type, setType] = useState<SchemaType>()
+  const [setupStatus, setSetupStatus] = useState<SetupStatus>('loading')
   const orgId = useAppSelector((state) => state.organization.orgId)
   const initialAttributeId = useId()
 
@@ -63,8 +68,21 @@ const CreateSchema = (): React.JSX.Element => {
     const { data } = response as AxiosResponse
 
     if (data?.statusCode === apiStatusCodes.API_STATUS_SUCCESS) {
-      const did = data?.data?.org_agents?.[0]?.orgDid
-      if (did) {
+      const agents = (data?.data?.org_agents ?? []) as {
+        tenantId?: string | null
+        walletName?: string | null
+        orgDid?: string | null
+      }[]
+      const [agent] = agents
+
+      const hasWallet = Boolean(agent?.tenantId || agent?.walletName)
+
+      if (!agent || !hasWallet) {
+        setSetupStatus('no-wallet')
+      } else if (!agent.orgDid) {
+        setSetupStatus('no-did')
+      } else {
+        const did = agent.orgDid
         if (did.includes(DidMethod.INDY)) {
           setSchemaTypeValues(SchemaTypeValue.INDY)
           setType(SchemaType.INDY)
@@ -75,9 +93,11 @@ const CreateSchema = (): React.JSX.Element => {
           setType(SchemaType.W3C)
           setSchemaTypeValues(SchemaTypeValue.NO_LEDGER)
         }
+        setSetupStatus('ready')
       }
     } else {
       setFailure(response as string)
+      setSetupStatus('ready')
     }
 
     setLoading(false)
@@ -102,6 +122,10 @@ const CreateSchema = (): React.JSX.Element => {
   }, [type])
 
   const filledInputs = (formData: IFormData): boolean => {
+    if (!type) {
+      return false
+    }
+
     const { schemaName, schemaVersion, attribute } = formData
 
     if (
@@ -271,6 +295,44 @@ const CreateSchema = (): React.JSX.Element => {
     return options
   }, [schemaTypeValues])
 
+  const renderPrerequisiteGate = (): React.JSX.Element => {
+    const isNoWallet = setupStatus === 'no-wallet'
+    const heading = isNoWallet
+      ? 'Wallet setup required'
+      : 'DID configuration required'
+    const description = isNoWallet
+      ? 'Your organization does not have a wallet configured yet. You need to set up a wallet and create a DID before you can create schemas.'
+      : 'Your organization wallet is set up, but a DID has not been created yet. Create a DID to define your schema signing method before proceeding.'
+    const actionLabel = isNoWallet ? 'Set up wallet' : 'Create DID'
+    const actionPath = isNoWallet
+      ? `/wallet-setup?orgId=${orgId}`
+      : `/create-did?orgId=${orgId}`
+
+    return (
+      <Card className="m-0 md:m-6">
+        <div className="flex flex-col items-center gap-5 px-6 py-12 text-center">
+          <div className="flex h-14 w-14 items-center justify-center rounded-full bg-amber-500/10">
+            <AlertTriangle className="h-7 w-7 text-amber-500" />
+          </div>
+          <div className="max-w-md space-y-2">
+            <h2 className="text-foreground text-lg font-semibold">{heading}</h2>
+            <p className="text-muted-foreground text-sm">{description}</p>
+          </div>
+          <div className="flex flex-col items-center gap-2">
+            <Button onClick={() => hardNavigate(actionPath)}>
+              {actionLabel}
+            </Button>
+            <p className="text-muted-foreground text-xs">
+              {isNoWallet
+                ? 'After setting up your wallet, return here to create a DID and then your schema.'
+                : 'After creating a DID, return here to create your schema.'}
+            </p>
+          </div>
+        </div>
+      </Card>
+    )
+  }
+
   return (
     <div className="pt-2">
       <h1 className="text-foreground ml-10 text-xl font-semibold">
@@ -289,29 +351,34 @@ const CreateSchema = (): React.JSX.Element => {
         </div>
       )}
 
-      <Card className="m-0 px-4 py-8 md:m-6" id="createSchemaCard">
-        <div>
-          <FormikData
-            formData={formData}
-            type={type}
-            setFormData={setFormData}
-            setShowPopup={setShowPopup}
-            validSameAttribute={validSameAttribute}
-            filteredOptions={filteredOptions}
-            filledInputs={filledInputs}
-            createLoader={createLoader}
-            inValidAttributes={inValidAttributes}
-            success={success}
-            failure={failure}
-            showPopup={showPopup}
-            confirmCreateSchema={confirmCreateSchema}
-            initFormData={initFormData}
-            setFailure={setFailure}
-            setSuccess={setSuccess}
-            loading={loading}
-          />
-        </div>
-      </Card>
+      {setupStatus === 'loading' ? null : setupStatus === 'no-wallet' ||
+        setupStatus === 'no-did' ? (
+        renderPrerequisiteGate()
+      ) : (
+        <Card className="m-0 px-4 py-8 md:m-6" id="createSchemaCard">
+          <div>
+            <FormikData
+              formData={formData}
+              type={type}
+              setFormData={setFormData}
+              setShowPopup={setShowPopup}
+              validSameAttribute={validSameAttribute}
+              filteredOptions={filteredOptions}
+              filledInputs={filledInputs}
+              createLoader={createLoader}
+              inValidAttributes={inValidAttributes}
+              success={success}
+              failure={failure}
+              showPopup={showPopup}
+              confirmCreateSchema={confirmCreateSchema}
+              initFormData={initFormData}
+              setFailure={setFailure}
+              setSuccess={setSuccess}
+              loading={loading}
+            />
+          </div>
+        </Card>
+      )}
     </div>
   )
 }
