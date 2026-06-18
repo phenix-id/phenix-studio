@@ -56,8 +56,6 @@ export function UsageMeterTable({
               <TableHead>Unit price</TableHead>
               <TableHead>Included</TableHead>
               <TableHead>Used</TableHead>
-              <TableHead>Pending</TableHead>
-              <TableHead>Accepted</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -76,12 +74,6 @@ export function UsageMeterTable({
                 </TableCell>
                 <TableCell>{formatNumber(dimension.included)}</TableCell>
                 <TableCell>{formatNumber(dimension.used)}</TableCell>
-                <TableCell>
-                  {formatNumber(dimension.pendingSubmission)}
-                </TableCell>
-                <TableCell>
-                  {formatNumber(dimension.acceptedByMicrosoft)}
-                </TableCell>
               </TableRow>
             ))}
           </TableBody>
