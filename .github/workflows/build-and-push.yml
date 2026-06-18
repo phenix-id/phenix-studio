@@ -65,6 +65,30 @@ jobs:
           tags: |
             ${{ env.ACR_SERVER }}/${{ env.IMAGE_NAME }}:${{ steps.tag.outputs.sha }}
             ${{ env.ACR_SERVER }}/${{ env.IMAGE_NAME }}:latest
+          build-args: |
+            NEXT_PUBLIC_MODE=DEV
+            NEXT_PUBLIC_BASE_URL=https://service.phenix-id.com
+            NEXT_PUBLIC_ECOSYSTEM_FRONT_END_URL=https://studio.phenix-id.com
+            NEXT_PUBLIC_PLATFORM_NAME=Phenix
+            NEXT_PUBLIC_ACTIVE_THEME=phenix
+            NEXT_PUBLIC_APP_TITLE=Phenix Studio
+            NEXT_PUBLIC_FOOTER_TEXT=Phenix ID. All rights reserved.
+            NEXT_PUBLIC_LOGO_BASE_URL=
+            NEXT_PUBLIC_CURRENT_RELEASE=dev
+            NEXT_PUBLIC_ENABLE_APP_LAUNCHER=false
+            NEXT_PUBLIC_APP_NAME=Phenix
+            NEXT_PUBLIC_ENABLE_SOCIAL_LOGIN=false
+            NEXT_PUBLIC_ENABLE_BILLING_OPTION=true
+            NEXT_PUBLIC_SOVIO_LANDINGPAGE_URL=
+            NEXT_PUBLIC_POLYGON_TESTNET_URL=https://rpc-amoy.polygon.technology/
+            NEXT_PUBLIC_POLYGON_MAINNET_URL=https://polygon-rpc.com/
+            NEXT_PUBLIC_MARKETPLACE_MANAGE_URL=https://portal.azure.com/
+            NEXT_PUBLIC_MARKETPLACE_PRODUCT_NAME=PHENIX ID
+            NEXT_PUBLIC_MARKETPLACE_PUBLISHER_NAME=Phenix
+            NEXT_PUBLIC_MARKETPLACE_SUPPORT_EMAIL=support@phenix-id.com
+            NEXT_PUBLIC_MARKETPLACE_PRIVACY_EMAIL=privacy@phenix-id.com
+            NEXT_PUBLIC_MARKETPLACE_REQUIRED=true
+            NEXT_PUBLIC_MARKETPLACE_OFFER_URL=https://portal.azure.com/#create/iden2inc1778679045619.phenix-platform-dev-test-saas-01
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -94,7 +118,7 @@ jobs:
 
           cd manifests/apps/${{ env.MANIFEST_ENV }}
           if grep -q "${{ env.IMAGE_NAME }}" kustomization.yaml; then
-            sed -i "/${{ env.IMAGE_NAME }}/,/newTag:/s/newTag: .*/newTag: $IMAGE_TAG/" kustomization.yaml
+            sed -i "/^[[:space:]]*- name: .*\\/${{ env.IMAGE_NAME }}$/,/^[[:space:]]*newTag:/s|^[[:space:]]*newTag: .*|    newTag: $IMAGE_TAG # {\"\\\$imagepolicy\": \"flux-system:phenix-studio:tag\"}|" kustomization.yaml
           else
             echo "::error::${{ env.IMAGE_NAME }} not found in prod kustomization.yaml"
             exit 1
