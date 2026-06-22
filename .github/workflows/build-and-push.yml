@@ -93,7 +93,7 @@ jobs:
             NEXT_PUBLIC_MARKETPLACE_SUPPORT_EMAIL=support@phenix-id.com
             NEXT_PUBLIC_MARKETPLACE_PRIVACY_EMAIL=privacy@phenix-id.com
             NEXT_PUBLIC_MARKETPLACE_REQUIRED=true
-            NEXT_PUBLIC_MARKETPLACE_OFFER_URL=https://portal.azure.com/#create/iden2inc1778679045619.phenix-platform-dev-test-saas-01
+            NEXT_PUBLIC_MARKETPLACE_OFFER_URL=https://portal.azure.com/#create/iden2inc1778679045619.phenix_id
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
