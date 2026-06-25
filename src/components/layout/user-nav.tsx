@@ -129,11 +129,12 @@ export function UserNav(): React.JSX.Element | null {
             Profile
           </DropdownMenuItem>
 
-          {/* Developer Settings — hidden until ready for release
+          {/* Developer Settings — accessible to all platform and org-level
+              roles. Generating client credentials is further gated to org
+              owners and platform admins inside the page itself. */}
           <DropdownMenuItem onClick={() => hardNavigate('/developers-setting')}>
             Developer Settings
           </DropdownMenuItem>
-          */}
 
           {process.env.NEXT_PUBLIC_ENABLE_BILLING_OPTION?.toLowerCase() ===
             'true' && (

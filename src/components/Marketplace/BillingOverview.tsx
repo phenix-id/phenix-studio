@@ -10,12 +10,10 @@ import {
 import { Loader2, RefreshCw } from 'lucide-react'
 import {
   MarketplaceEntitlements,
-  MarketplaceMeteringEvent,
   MarketplaceSubscriptionSummary,
   MarketplaceUsageSummary,
   getMarketplaceSubscription,
   getOrgEntitlements,
-  getOrgMeteringEvents,
   getOrgUsageSummary,
   refreshMarketplaceSubscription,
 } from '@/app/api/marketplace'
@@ -27,10 +25,6 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import {
-  marketplacePlanCatalog,
-  marketplaceSetupFeeUsd,
-} from '@/config/marketplacePlans'
 import { useCallback, useEffect, useState } from 'react'
 import { AxiosResponse } from 'axios'
 import { Button } from '@/components/ui/button'
@@ -38,6 +32,7 @@ import { MarketplacePlanSummary } from './MarketplacePlanSummary'
 import { MarketplaceStatusBanner } from './MarketplaceStatusBanner'
 import PageContainer from '@/components/layout/page-container'
 import { UsageMeterTable } from './UsageMeterTable'
+import { marketplacePlanCatalog } from '@/config/marketplacePlans'
 import { useAppSelector } from '@/lib/hooks'
 
 function extractData<T>(response: AxiosResponse | string): T | null {
@@ -119,11 +114,6 @@ function MarketplacePricingCard(): React.JSX.Element {
     <Card className="rounded-md">
       <CardHeader>
         <CardTitle>Marketplace pricing</CardTitle>
-        <CardDescription>
-          A one-time setup fee of {formatUsd(marketplaceSetupFeeUsd)} is billed
-          during the first organization setup. Standard monthly plan billing
-          applies from the next billing month.
-        </CardDescription>
       </CardHeader>
       <CardContent>
         <div className="overflow-x-auto">
@@ -208,9 +198,6 @@ export function BillingOverview(): React.JSX.Element {
     useState<MarketplaceSubscriptionSummary | null>(null)
   const [usageSummary, setUsageSummary] =
     useState<MarketplaceUsageSummary | null>(null)
-  const [meteringEvents, setMeteringEvents] = useState<
-    MarketplaceMeteringEvent[]
-  >([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   // Normalize to null so SSR and client evaluate identically — guards against
@@ -288,11 +275,6 @@ export function BillingOverview(): React.JSX.Element {
 
         const usageResponse = await getOrgUsageSummary(orgId)
         setUsageSummary(extractData<MarketplaceUsageSummary>(usageResponse))
-
-        const eventsResponse = await getOrgMeteringEvents(orgId)
-        setMeteringEvents(
-          extractData<MarketplaceMeteringEvent[]>(eventsResponse) || [],
-        )
       } finally {
         // Guaranteed to run on success, early return, or any unexpected throw —
         // prevents loading from ever getting stuck at true.
@@ -405,10 +387,7 @@ export function BillingOverview(): React.JSX.Element {
               </p>
             )}
             {!loading && (
-              <UsageMeterTable
-                dimensions={usageSummary?.dimensions || []}
-                events={meteringEvents}
-              />
+              <UsageMeterTable dimensions={usageSummary?.dimensions || []} />
             )}
           </CardContent>
         </Card>
