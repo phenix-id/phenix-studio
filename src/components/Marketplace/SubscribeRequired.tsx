@@ -315,16 +315,10 @@ export function SubscribeRequired({
             </div>
 
             <div
-              className="mt-auto flex items-center justify-between pt-5"
+              className="mt-auto flex items-center justify-center pt-5"
               style={sty.footer}
             >
               <span>© 2026 PHENIX ID</span>
-              <a
-                href="mailto:hello@phenix.id"
-                style={{ color: 'inherit', textDecoration: 'underline' }}
-              >
-                hello@phenix.id
-              </a>
             </div>
           </div>
 

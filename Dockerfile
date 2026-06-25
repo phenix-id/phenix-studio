@@ -86,7 +86,7 @@ FROM node:22-alpine AS production
 
 # Create a non-root user
 # RUN groupadd -r appgroup && useradd -r -g appgroup appuser
-RUN addgroup -S appgroup && adduser -S appuser -G appgroup
+RUN addgroup -g 1001 -S appgroup && adduser -u 1001 -S appuser -G appgroup
 # Set working directory
 WORKDIR /app
 
