@@ -1,10 +1,6 @@
 'use client'
 
 import {
-  MarketplaceMeteringEvent,
-  MarketplaceUsageDimension,
-} from '@/app/api/marketplace'
-import {
   Table,
   TableBody,
   TableCell,
@@ -12,11 +8,11 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
+import { MarketplaceUsageDimension } from '@/app/api/marketplace'
 import { marketplaceMeterUnitPricesUsd } from '@/config/marketplacePlans'
 
 interface UsageMeterTableProps {
   dimensions: MarketplaceUsageDimension[]
-  events?: MarketplaceMeteringEvent[]
 }
 
 const formatNumber = (value?: number): string =>
@@ -36,9 +32,14 @@ const formatUsd = (value?: number): string => {
 
 export function UsageMeterTable({
   dimensions,
-  events = [],
 }: UsageMeterTableProps): React.JSX.Element {
-  if (!dimensions.length) {
+  // The one-time setup fee is billed separately and is not surfaced as a
+  // usage meter row.
+  const meteredDimensions = dimensions.filter(
+    (dimension) => dimension.dimension !== 'setup_fee',
+  )
+
+  if (!meteredDimensions.length) {
     return (
       <div className="text-muted-foreground rounded-md border p-6 text-sm">
         No Marketplace usage has been reported for this billing period.
@@ -59,7 +60,7 @@ export function UsageMeterTable({
             </TableRow>
           </TableHeader>
           <TableBody>
-            {dimensions.map((dimension) => (
+            {meteredDimensions.map((dimension) => (
               <TableRow key={dimension.dimension}>
                 <TableCell>
                   <div className="font-medium">{dimension.displayName}</div>
@@ -79,45 +80,6 @@ export function UsageMeterTable({
           </TableBody>
         </Table>
       </div>
-
-      {events.length > 0 && (
-        <div className="overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="whitespace-nowrap">
-                  Submitted hour
-                </TableHead>
-                <TableHead>Dimension</TableHead>
-                <TableHead>Quantity</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Message</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {events.map((event) => (
-                <TableRow key={event.id}>
-                  <TableCell className="whitespace-nowrap">
-                    {event.usageStartTime}
-                  </TableCell>
-                  <TableCell>{event.dimension}</TableCell>
-                  <TableCell>{formatNumber(event.quantity)}</TableCell>
-                  <TableCell>{event.status}</TableCell>
-                  {/* Truncate long API messages — hover to read the full string */}
-                  <TableCell className="max-w-[280px]">
-                    <p
-                      className="truncate text-sm"
-                      title={event.marketplaceMessage || undefined}
-                    >
-                      {event.marketplaceMessage || '-'}
-                    </p>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
-      )}
     </div>
   )
 }

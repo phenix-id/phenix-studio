@@ -10,6 +10,7 @@ import { Card } from '@/components/ui/card'
 import { ClientSecretKeySvg } from '@/config/svgs/ClientSecretKeySvg'
 import CopyDid from '@/config/CopyDid'
 import Loader from '@/components/Loader'
+import { PlatformRoles } from '@/features/common/enum'
 import { Roles } from '@/common/enums'
 import { apiStatusCodes } from '@/config/CommonConstant'
 import { getOrganizations } from '@/app/api/organization'
@@ -50,6 +51,9 @@ const ClientCredentials = (): React.JSX.Element => {
   const token = useAppSelector((state) => state.auth.token)
   const orgId = useAppSelector((state) => state.organization.orgId)
   const [userRoles, setUserRoles] = useState<string[]>([])
+  // Platform admins are a platform-level role (not tied to the selected org),
+  // so they're tracked separately from the per-org userRoles above.
+  const [isPlatformAdmin, setIsPlatformAdmin] = useState<boolean>(false)
 
   const [currentPage] = useState(1)
   const [pageSize] = useState(10)
@@ -179,6 +183,14 @@ const ClientCredentials = (): React.JSX.Element => {
           if (hasOrganizations !== hasOrg) {
             setHasOrganizations(hasOrg)
           }
+          // Platform admin is a global role surfaced in userOrgRoles, matching
+          // how the login flow detects it (user-auth-form.tsx).
+          setIsPlatformAdmin(
+            userProfile.userOrgRoles?.some(
+              (role: UserOrgRole) =>
+                role.orgRole?.name === PlatformRoles.platformAdmin,
+            ) ?? false,
+          )
         }
       } catch (error) {
         console.error('Error fetching profile in DeveloperSetting:', error)
@@ -249,8 +261,9 @@ const ClientCredentials = (): React.JSX.Element => {
                           </span>
                         </div>
 
-                        {Array.isArray(userRoles) &&
-                          userRoles.includes(Roles.OWNER) &&
+                        {((Array.isArray(userRoles) &&
+                          userRoles.includes(Roles.OWNER)) ||
+                          isPlatformAdmin) &&
                           buttonDisplay && (
                             <Button
                               onClick={createClientCredentials}
@@ -292,37 +305,6 @@ const ClientCredentials = (): React.JSX.Element => {
                       )}
                     </div>
                   </form>
-                </Card>
-              </div>
-              <div className="flex w-full flex-col gap-6 px-6 py-6 md:flex-row">
-                <Card className="w-full rounded-2xl border p-6 shadow-sm md:w-1/2">
-                  <h2 className="text-foreground mb-2 text-base font-semibold">
-                    API Documentation
-                  </h2>
-                  <p className="text-muted-foreground mb-4 text-sm">
-                    Learn how to authenticate, make requests, and manage your
-                    credentials.
-                  </p>
-                  <a
-                    href="https://docs.credebl.id/docs/"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-sm font-medium text-blue-600 hover:underline"
-                  >
-                    View Documentation →
-                  </a>
-                </Card>
-
-                <Card className="w-full rounded-2xl border p-6 shadow-sm md:w-1/2">
-                  <h2 className="text-foreground mb-2 text-base font-semibold">
-                    Application Version
-                  </h2>
-                  <p className="text-muted-foreground text-sm">
-                    Current Version:{' '}
-                    <span className="font-medium">
-                      {process.env.NEXT_PUBLIC_CURRENT_RELEASE}
-                    </span>
-                  </p>
                 </Card>
               </div>
             </div>
