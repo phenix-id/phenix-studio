@@ -161,7 +161,7 @@ export const OrganizationDashboard = ({
                 <Button
                   size="icon"
                   onClick={handleDeleteOrg}
-                  aria-label="Delete organization"
+                  aria-label="Delete organization data"
                   className="bg-transparent hover:bg-transparent"
                 >
                   <DeleteIcon />
