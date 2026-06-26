@@ -14,12 +14,9 @@ import {
 import React, { useEffect, useState } from 'react'
 import {
   deleteIssuanceRecords,
-  deleteOrganization,
-  deleteOrganizationWallet,
   deleteVerificationRecords,
   getOrganizationReferences,
 } from '@/app/api/deleteorganization'
-import { resetOrgState, setTenantData } from '@/lib/orgSlice'
 import { useRouter, useSearchParams } from 'next/navigation'
 
 import type { AxiosResponse } from 'axios'
@@ -30,10 +27,8 @@ import PageContainer from '@/components/layout/page-container'
 import { apiStatusCodes } from '@/config/CommonConstant'
 import { deleteConnectionRecords } from '@/app/api/connection'
 import { getOrganizationById } from '@/app/api/organization'
-import { hardNavigate } from '@/utils/navigation'
 import { pathRoutes } from '@/config/pathRoutes'
 import { toast } from 'sonner'
-import { useAppDispatch } from '@/lib/hooks'
 
 interface IOrgCount {
   verificationRecordsCount?: number
@@ -76,14 +71,12 @@ export default function DeleteOrganizationPage(): React.JSX.Element {
     null,
   )
   const [deleteLoading, setDeleteLoading] = useState<boolean>(false)
-  const [isWalletPresent, setIsWalletPresent] = useState<boolean>(false)
   const [showPopup, setShowPopup] = useState<boolean>(false)
   const [deleteAction, setDeleteAction] = useState<() => void>()
   const [confirmMessage, setConfirmMessage] = useState<
     string | React.ReactNode
   >('')
   const [description, setDescription] = useState<string>('')
-  const dispatch = useAppDispatch()
 
   const fetchOrganizationDetails = async (): Promise<void> => {
     if (!orgId) {
@@ -97,15 +90,7 @@ export default function DeleteOrganizationPage(): React.JSX.Element {
       const { data } = response as AxiosResponse
 
       if (data?.statusCode === apiStatusCodes.API_STATUS_SUCCESS) {
-        const organizationData = data?.data
-        setOrgData(organizationData)
-        const walletName = organizationData?.org_agents?.[0]?.walletName
-
-        if (walletName) {
-          setIsWalletPresent(true)
-        } else {
-          setIsWalletPresent(false)
-        }
+        setOrgData(data?.data)
       }
     } catch (error) {
       console.error('An error occurred:', error)
@@ -225,53 +210,10 @@ export default function DeleteOrganizationPage(): React.JSX.Element {
     setDeleteLoading(false)
   }
 
-  const deleteOrgWallet = async (): Promise<void> => {
-    try {
-      // Assuming deleteOrganizationWallet needs orgId
-      const response = await deleteOrganizationWallet(orgId as string)
-      const { data } = response as AxiosResponse
-      if (data?.statusCode === apiStatusCodes.API_STATUS_SUCCESS) {
-        toast.success(data?.message)
-        setIsWalletPresent(false)
-        await fetchOrganizationReferences()
-        setShowPopup(false)
-      } else {
-        throw new Error(data?.message || 'Failed to delete organization wallet')
-      }
-    } catch (error) {
-      console.error('An error occurred:', error)
-      setError(getErrorMessage(error, 'Failed to delete organization wallet'))
-      throw error
-    }
-  }
-
-  const deleteOrganizations = async (): Promise<void> => {
-    try {
-      const response = await deleteOrganization(orgId as string)
-      const { data } = response as AxiosResponse
-
-      if (data?.statusCode === apiStatusCodes.API_STATUS_SUCCESS) {
-        toast.success(data?.message)
-        dispatch(resetOrgState())
-        setShowPopup(false)
-        dispatch(setTenantData(null))
-        hardNavigate(pathRoutes.organizations.root, true)
-      } else {
-        throw new Error(data?.message || 'Failed to delete organization')
-      }
-    } catch (error) {
-      console.error('An error occurred:', error)
-      setError(getErrorMessage(error, 'Failed to delete organization'))
-      throw error
-    }
-  }
-
   const deleteFunctions = {
     deleteVerifications,
     deleteIssuance,
     deleteConnection,
-    deleteOrgWallet,
-    deleteOrganizations,
   }
 
   if (loading && !orgData) {
@@ -337,56 +279,18 @@ export default function DeleteOrganizationPage(): React.JSX.Element {
             ? 'Delete verifications first (Step 1)'
             : null,
     },
-    {
-      step: 4,
-      title: 'Organization wallet',
-      description: 'Delete the organization wallet and all associated DIDs.',
-      count: isWalletPresent ? 1 : 0,
-      deleteFunc: deleteFunctions.deleteOrgWallet,
-      confirmMessage: 'Are you sure you want to delete organization wallet?',
-      isDisabled: connCount > 0 || issCount > 0 || verCount > 0,
-      blockingReason:
-        connCount > 0
-          ? 'Delete connections first (Step 3)'
-          : issCount > 0
-            ? 'Delete issuance records first (Step 2)'
-            : verCount > 0
-              ? 'Delete verifications first (Step 1)'
-              : null,
-    },
-    {
-      step: 5,
-      title: 'Organization',
-      description:
-        'Permanently delete the organization including all users, schemas, and credential definitions.',
-      deleteFunc: deleteFunctions.deleteOrganizations,
-      confirmMessage: (
-        <>
-          Are you sure you want to delete organization{' '}
-          <span className="text-lg font-bold">{orgData?.name}</span>?
-        </>
-      ),
-      isDisabled:
-        isWalletPresent || connCount > 0 || issCount > 0 || verCount > 0,
-      blockingReason:
-        connCount > 0
-          ? 'Delete connections first (Step 3)'
-          : issCount > 0
-            ? 'Delete issuance records first (Step 2)'
-            : verCount > 0
-              ? 'Delete verifications first (Step 1)'
-              : isWalletPresent
-                ? 'Delete organization wallet first (Step 4)'
-                : null,
-    },
   ]
 
   return (
     <PageContainer>
       <div className="px-4 pt-2">
-        <h1 className="mt-2 mr-auto mb-4 ml-1 text-xl font-semibold sm:text-2xl">
-          Delete Organization
+        <h1 className="mt-2 mr-auto mb-1 ml-1 text-xl font-semibold sm:text-2xl">
+          Delete Organization Data
         </h1>
+        <p className="text-muted-foreground mb-4 ml-1 text-sm">
+          Clear this organization&apos;s records below. To remove the
+          organization itself, cancel your subscription in Microsoft.
+        </p>
 
         {error && (
           <Alert variant="destructive" className="mb-4">
